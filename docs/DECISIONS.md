@@ -409,6 +409,61 @@ automatically a bug in the code.
 
 ---
 
+## D26 — `authorize()` fuses the policy call with the audit write
+
+**Decision.** Endpoints call `audit.recorder.authorize()`, never
+`policy.decide()`. `authorize` calls the policy, writes the audit row, and
+returns the decision.
+
+**Why.** "Remember to log every decision" is a convention, and conventions get
+skipped. Fusing the operations makes an unaudited decision unobtainable through
+the supported path. `test_api_modules_do_not_call_decide_directly` inspects the
+API package's AST and fails if any endpoint reaches past the recorder — the
+failure mode being guarded is an endpoint that passes every authorization test
+while silently breaking the compliance requirement.
+
+---
+
+## D27 — Audit rows are attributed to the principal's tenant, not the resource's
+
+**Decision.** On a denied cross-tenant attempt, the row is written under the
+*attempting* user's tenant.
+
+**Why — ownership.** Lab-broad's auditor is the party who needs to see that
+their own user is probing other labs. Lab-sanger learns nothing actionable from
+a request that was blocked before touching their data.
+
+**Why — mechanics, and this is the decisive reason.** Writing the row under the
+target tenant is *blocked by the RLS WITH CHECK policy*, because the session is
+bound to the principal's tenant. Verified directly:
+
+```
+SET biovault.tenant_id = 'lab-broad';
+INSERT INTO audit_entries (..., tenant_id='lab-sanger', ...);
+ERROR:  new row violates row-level security policy for table "audit_entries"
+
+INSERT INTO audit_entries (..., tenant_id='lab-broad', ...);
+INSERT 0 1
+```
+
+Had I chosen the intuitive-seeming attribution, every cross-tenant intrusion
+attempt would have raised an error instead of being recorded. A security
+control (RLS) would have destroyed a security signal (the audit trail) — and
+the bug would only surface during an actual intrusion, when the log is needed.
+
+---
+
+## D28 — Denials logged at WARNING in addition to the database
+
+**Decision.** `authorize` emits a WARNING log line on every denial.
+
+**Why.** A repeated pattern of denied cross-tenant reads is the signal an
+intrusion investigation needs, and requiring a database query to notice it
+means nobody notices in real time. The database row is the compliance record;
+the log line is the operational alert.
+
+---
+
 ## OPEN-1 — `rotate_kek` script referenced but not yet written
 
 `docs/key-rotation.md` step 3 documents
