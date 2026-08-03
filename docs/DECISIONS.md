@@ -80,3 +80,63 @@ success echo fired *despite* the failure, because the pipe masked pip's exit
 code. Subsequent shell steps use `set -o pipefail`. Worth remembering: a
 verification step that can print "OK" on failure is worse than no verification
 step, because it manufactures false confidence.
+
+---
+
+## D5 — Dataset ID bound as AAD at both key-wrap and field layers
+
+**Decision.** The dataset ID is passed as additional authenticated data when
+wrapping a DEK *and* when encrypting a field.
+
+**Why.** Without it, an attacker with database write access could move an
+encrypted blob from lab A's dataset into lab B's dataset and read it through
+lab B's legitimate decryption path. RBAC would not catch this: every access
+check would pass, because the attacker is authorized for the record they moved
+the ciphertext *into*. AAD makes the ciphertext refuse to decrypt outside the
+dataset it was created for, so the crypto layer enforces an invariant the
+authorization layer structurally cannot see.
+
+**Verified by.** `test_ciphertext_moved_to_another_dataset_fails` and
+`test_data_key_from_one_dataset_cannot_unwrap_for_another`.
+
+---
+
+## D6 — `DecryptionError` carries no diagnostic detail
+
+**Decision.** All authentication failures raise the same error with a generic
+message. The underlying `InvalidTag` is preserved via `raise ... from exc` for
+local debugging but never surfaces in the message.
+
+**Why.** An error that distinguishes "wrong key" from "tampered ciphertext"
+is an oracle. Attackers use exactly that signal to mount adaptive attacks.
+The cause chain keeps the information available to a developer with stack
+access without exposing it to a caller.
+
+---
+
+## D7 — Crypto verified empirically, not just via a green suite
+
+**Decision.** Beyond the 24 unit tests, the cipher was checked directly:
+ciphertext length equals plaintext + 16 bytes (confirming a GCM tag is
+present), nonce is 96 bits, DEK is 256 bits, and encrypting 64 identical bytes
+produces four *distinct* 16-byte blocks.
+
+**Why.** That last check is a direct empirical disproof of ECB mode — the
+property behind the well-known "ECB penguin." A passing test suite proves the
+code does what I wrote; this proves the cipher has the property the résumé
+claims. The spec's honesty rule makes that distinction worth the extra step.
+
+**Observed output.** `ciphertext len: 48 (pt 32 + 16B tag)`, `nonce bits: 96`,
+`DEK bits: 256`, `ECB-like repeat blocks: False`.
+
+---
+
+## OPEN-1 — `rotate_kek` script referenced but not yet written
+
+`docs/key-rotation.md` step 3 documents
+`python -m biovault.scripts.rotate_kek --from kek-1 --to kek-2`. The
+`rewrap_data_key` primitive it depends on exists and is tested, but the CLI
+wrapper does not exist yet. It needs the database layer (task #4) first.
+
+**Must be resolved before the README claims key rotation is operational.**
+Tracked so the doc does not silently become a false claim.
