@@ -1,0 +1,200 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  POSTGRES_USER: biovault_owner
+  POSTGRES_PASSWORD: ci-only-owner-password-not-a-real-secret
+  POSTGRES_DB: biovault
+  POSTGRES_HOST: localhost
+  POSTGRES_PORT: "5432"
+  BIOVAULT_APP_DB_USER: biovault_app
+  BIOVAULT_APP_DB_PASSWORD: ci-only-app-password-not-a-real-secret
+  BIOVAULT_MASTER_KEK_ID: kek-ci
+  BIOVAULT_JWT_ISSUER: https://biovault.local
+  BIOVAULT_JWT_AUDIENCE: biovault-api
+  BIOVAULT_ENV: test
+  # Converts integration-test skips into hard failures. Without this a
+  # misconfigured job could report a green security suite having verified
+  # nothing about tenant isolation.
+  BIOVAULT_REQUIRE_INTEGRATION: "1"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Ruff (includes flake8-bandit security rules)
+        run: ruff check src/ tests/
+
+  security-smoke:
+    # The resume claim is "CI/CD security smoke tests validating access-control
+    # policies on every push". This job is that claim. It runs the
+    # access-control suite alone so a failure is unambiguous, and it must pass
+    # before the full suite job is considered meaningful.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.5-alpine
+        env:
+          POSTGRES_USER: biovault_owner
+          POSTGRES_PASSWORD: ci-only-owner-password-not-a-real-secret
+          POSTGRES_DB: biovault
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U biovault_owner -d biovault"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -e ".[dev]"
+
+      - name: Generate ephemeral key material
+        run: |
+          echo "BIOVAULT_MASTER_KEK=$(python -c 'import base64,os; print(base64.b64encode(os.urandom(32)).decode())')" >> "$GITHUB_ENV"
+          echo "BIOVAULT_JWT_SECRET=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" >> "$GITHUB_ENV"
+
+      - name: Bootstrap schema, RLS, and synthetic seed data
+        run: python -m biovault.db.bootstrap
+
+      - name: Confirm RLS is enabled AND forced, and the app role cannot bypass it
+        run: |
+          PGPASSWORD="$POSTGRES_PASSWORD" psql -h localhost -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          DECLARE bad int;
+          BEGIN
+            SELECT count(*) INTO bad FROM pg_class
+             WHERE relname IN ('users','datasets','genomic_records','audit_entries',
+                               'dataset_keys','dataset_grants')
+               AND (relrowsecurity IS false OR relforcerowsecurity IS false);
+            IF bad > 0 THEN
+              RAISE EXCEPTION 'RLS not enabled/forced on % table(s)', bad;
+            END IF;
+
+            SELECT count(*) INTO bad FROM pg_roles
+             WHERE rolname = 'biovault_app' AND (rolsuper OR rolbypassrls);
+            IF bad > 0 THEN
+              RAISE EXCEPTION 'app role can bypass RLS; isolation tests would be meaningless';
+            END IF;
+          END
+          $$;
+          SQL
+
+      - name: Security smoke tests — access-control policies
+        run: pytest tests/security/ -v --tb=short
+
+      - name: The eight mandated negative cases, named explicitly
+        run: |
+          pytest tests/ -v --tb=short -k "\
+          test_explicit_cross_tenant_query_returns_nothing or \
+          test_expired_token_is_rejected or \
+          test_tampered_signature_is_rejected or \
+          test_alg_none_token_is_rejected or \
+          test_role_escalation_in_payload_is_rejected or \
+          test_replaying_a_consumed_token_revokes_the_family or \
+          test_idor_cross_tenant_dataset_read_is_denied or \
+          test_sql_injection_in_query_filter_is_neutralised"
+
+  tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.5-alpine
+        env:
+          POSTGRES_USER: biovault_owner
+          POSTGRES_PASSWORD: ci-only-owner-password-not-a-real-secret
+          POSTGRES_DB: biovault
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U biovault_owner -d biovault"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -e ".[dev]"
+
+      - name: Generate ephemeral key material
+        run: |
+          echo "BIOVAULT_MASTER_KEK=$(python -c 'import base64,os; print(base64.b64encode(os.urandom(32)).decode())')" >> "$GITHUB_ENV"
+          echo "BIOVAULT_JWT_SECRET=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" >> "$GITHUB_ENV"
+
+      - run: python -m biovault.db.bootstrap
+
+      - name: Full suite with coverage, failing under the 80% floor
+        # --cov-fail-under is coverage.py's own gate. Preferred over parsing a
+        # report ourselves: no XML parser in the loop, and no chance of the
+        # check silently passing because the report was missing or malformed.
+        run: pytest tests/ --cov --cov-report=term-missing --cov-fail-under=80
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: pip-audit — known vulnerabilities in dependencies
+        # Audits a frozen requirements list rather than the environment.
+        # `biovault` itself is installed editable and unpublished, which makes
+        # a bare `pip-audit --strict` fail on "not found on PyPI" -- a
+        # configuration error that looks exactly like a security finding.
+        run: |
+          pip freeze --exclude-editable > /tmp/requirements-audit.txt
+          echo "auditing $(wc -l < /tmp/requirements-audit.txt) packages"
+          pip-audit --strict --desc -r /tmp/requirements-audit.txt
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify the stack builds and starts from clean
+        run: |
+          cat > .env <<EOF
+          POSTGRES_USER=biovault_owner
+          POSTGRES_PASSWORD=ci-only-owner-password-not-a-real-secret
+          POSTGRES_DB=biovault
+          BIOVAULT_APP_DB_USER=biovault_app
+          BIOVAULT_APP_DB_PASSWORD=ci-only-app-password-not-a-real-secret
+          BIOVAULT_MASTER_KEK=$(python3 -c 'import base64,os; print(base64.b64encode(os.urandom(32)).decode())')
+          BIOVAULT_MASTER_KEK_ID=kek-ci
+          BIOVAULT_JWT_SECRET=$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')
+          BIOVAULT_JWT_ISSUER=https://biovault.local
+          BIOVAULT_JWT_AUDIENCE=biovault-api
+          BIOVAULT_ENV=test
+          EOF
+          docker compose up -d --build
+
+      - name: Wait for the API to become healthy
+        run: |
+          for i in $(seq 1 40); do
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/health)" = "200" ]; then
+              echo "API healthy after ${i} attempt(s)"; exit 0
+            fi
+            sleep 3
+          done
+          echo "API never became healthy"; docker compose logs; exit 1
+
+      - name: Unauthenticated requests must be rejected
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/datasets)
+          [ "$code" = "401" ] || { echo "expected 401, got $code"; exit 1; }
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
