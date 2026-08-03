@@ -197,6 +197,119 @@ ordering that someone later "fixes."
 
 ---
 
+## D12 — Two database roles, and RLS is FORCEd
+
+**Decision.** `biovault_owner` owns the schema and runs migrations.
+`biovault_app` owns nothing, is not a superuser, lacks `BYPASSRLS`, and is what
+the API connects as. Every tenant-scoped table has RLS both `ENABLE`d and
+`FORCE`d.
+
+**Why `FORCE` and not just `ENABLE`.** Plain `ENABLE` still exempts the table
+owner. Since migrations run as owner, a maintainer inspecting data as owner
+would see all tenants, possibly conclude RLS was broken, and "fix" it. Forcing
+subjects even the owner to policy.
+
+**Verified against the live database, not assumed.**
+
+```
+relname         | rls_enabled | rls_forced
+genomic_records | t           | t          (all 6 tables identical)
+
+rolname        | rolsuper | rolbypassrls
+biovault_owner | t        | t
+biovault_app   | f        | f
+```
+
+---
+
+## D13 — RLS policies fail closed when tenant context is unset
+
+**Decision.** Policies compare `tenant_id = current_setting('biovault.tenant_id', true)`.
+The `true` is the missing-ok flag.
+
+**Why.** Without it, `current_setting` *raises* when the setting is absent.
+Application code tends to catch and swallow such errors, which fails open. With
+it, the function returns NULL, `tenant_id = NULL` evaluates to NULL rather than
+TRUE, and the policy denies. Failing closed here is SQL's three-valued logic
+used deliberately.
+
+**Measured.** With no tenant context set, `SELECT count(*) FROM genomic_records`
+as the app role returns `0` — verified for all six tenant-scoped tables.
+
+---
+
+## D14 — Tenant context via `SET LOCAL`, not `SET`
+
+**Decision.** `set_config(..., is_local => true)` inside the transaction.
+
+**Why.** Connections are pooled. A plain `SET` persists on the connection after
+the request finishes, so the next request to borrow that connection inherits
+the previous tenant's context — a cross-tenant leak caused purely by connection
+reuse, and one that would not reproduce under single-threaded testing.
+`SET LOCAL` is reverted by PostgreSQL at COMMIT or ROLLBACK.
+
+**Guarded by.** `test_tenant_context_does_not_leak_between_transactions`.
+
+---
+
+## D15 — Audit append-only enforced by GRANT, not convention
+
+**Decision.** `GRANT SELECT, INSERT ON audit_entries` then
+`REVOKE UPDATE, DELETE`. Confirmed the app role holds only INSERT and SELECT.
+
+**Why.** An application that can rewrite its own audit trail has no audit
+trail. If the API is compromised, the attacker inherits its database
+privileges — so the restriction has to live below the application, in
+PostgreSQL.
+
+**Verified two ways.** The privilege table shows only INSERT/SELECT, *and*
+`test_audit_update_actually_fails_at_runtime` inserts a row then attempts an
+UPDATE, asserting `permission denied`. Checking the GRANT alone would not prove
+it bites.
+
+---
+
+## D16 — Integration tests skip locally but are forced in CI
+
+**Decision.** Database-backed tests skip when PostgreSQL is unreachable, so the
+unit suite runs without Docker. CI sets `BIOVAULT_REQUIRE_INTEGRATION=1`, which
+turns those skips into hard failures.
+
+**Why.** The skip is a genuine convenience but creates a dangerous failure
+mode: a misconfigured CI job reporting a green *security* suite having verified
+nothing about tenant isolation. The guard closes that gap.
+
+**Verified to fire.** Pointed at a dead database with the flag set, both guard
+tests failed as intended. Without the flag, 27 RLS tests reported
+`27 skipped` — not `27 passed`, which is the outcome that would have been
+dangerous.
+
+---
+
+## D17 — Seed data ordering: explicit flushes between dependency levels
+
+**Decision.** `bootstrap._seed` flushes after tenants, and again after users
+and datasets, before inserting rows that reference them.
+
+**Why.** SQLAlchemy batches INSERTs by mapper, not by `session.add()` call
+order. The first run failed with
+`ForeignKeyViolation: Key (tenant_id)=(lab-broad) is not present in table "tenants"`
+because every `Dataset` was sent before any `Tenant`. Adding objects in
+dependency order does not imply they are written in that order.
+
+---
+
+## D18 — Guard against vacuous isolation tests
+
+**Decision.** `test_every_tenant_has_data_so_isolation_tests_are_not_vacuous`
+asserts each of the three labs actually holds records.
+
+**Why.** Every cross-tenant test asserts a count is zero. If seeding failed and
+all tables were empty, all of them would pass while proving nothing. The claim
+"3 isolated research labs" requires three *populated* labs to mean anything.
+
+---
+
 ## OPEN-1 — `rotate_kek` script referenced but not yet written
 
 `docs/key-rotation.md` step 3 documents

@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:17.5-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-biovault_owner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-biovault}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-biovault_owner} -d ${POSTGRES_DB:-biovault}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-biovault_owner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-biovault}
+      BIOVAULT_APP_DB_USER: ${BIOVAULT_APP_DB_USER:-biovault_app}
+      BIOVAULT_APP_DB_PASSWORD: ${BIOVAULT_APP_DB_PASSWORD:?BIOVAULT_APP_DB_PASSWORD is required}
+      BIOVAULT_MASTER_KEK: ${BIOVAULT_MASTER_KEK:?BIOVAULT_MASTER_KEK is required}
+      BIOVAULT_MASTER_KEK_ID: ${BIOVAULT_MASTER_KEK_ID:-kek-1}
+      BIOVAULT_JWT_SECRET: ${BIOVAULT_JWT_SECRET:?BIOVAULT_JWT_SECRET is required}
+      BIOVAULT_JWT_ISSUER: ${BIOVAULT_JWT_ISSUER:-https://biovault.local}
+      BIOVAULT_JWT_AUDIENCE: ${BIOVAULT_JWT_AUDIENCE:-biovault-api}
+      BIOVAULT_ENV: ${BIOVAULT_ENV:-development}
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "python -m biovault.db.bootstrap &&
+             uvicorn biovault.api.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  pgdata:
