@@ -71,7 +71,7 @@ a running PostgreSQL — `docker compose up -d db` first.
 
 | Claim | Verify with |
 |---|---|
-| Cross-tenant access denied at the application layer | `pytest tests/security/test_policy_is_central.py -k tenant_isolation` |
+| Cross-tenant access denied at the application layer | `pytest tests/security/test_policy_is_central.py tests/unit/test_policy.py` |
 | Cross-tenant access denied at the database layer, independently | `pytest tests/security/test_rls_isolation.py` |
 | AES-256-GCM authenticated encryption at rest | `pytest tests/unit/test_envelope.py` |
 | OAuth 2.0 PKCE (S256) | `pytest tests/security/test_pkce.py` |
