@@ -464,6 +464,103 @@ the log line is the operational alert.
 
 ---
 
+## D29 — Denials return 404, never 403
+
+**Decision.** Every authorization denial returns the same 404 and body as a
+genuinely missing resource.
+
+**Why.** A 403 confirms the resource exists. An attacker enumerating
+`/datasets/<id>` against a 403/404 boundary maps another lab's holdings without
+reading a single record — and dataset names alone can disclose research
+direction (`huntingtons-cohort-2024`). Returning an identical 404 for both
+collapses that oracle.
+
+**Guarded by.** `test_denied_and_nonexistent_are_indistinguishable`, which
+compares both status code *and* response body.
+
+---
+
+## D30 — Missing-resource requests are still audited
+
+**Decision.** Handlers call `authorize()` before raising 404 on a dataset that
+does not exist.
+
+**Why.** Probing for valid dataset identifiers is itself an attack signal.
+Without this call, an enumeration sweep would leave *no trace* in the audit
+log precisely because none of the guesses landed — the reconnaissance phase
+would be invisible while the successful hit was recorded.
+
+---
+
+## D31 — LIKE metacharacters escaped in the query filter
+
+**Decision.** `%`, `_`, and `\` are escaped in `specimen_label` before binding,
+with an explicit `escape="\\"`.
+
+**Why.** Parameterization stops SQL injection but not *filter widening*: a
+bound value of `%` is still a valid LIKE wildcard matching every row. That
+turns a narrow lookup into a full dataset scan, which is an exfiltration
+primitive rather than an injection one.
+
+**Guarded by.** `test_like_wildcards_are_escaped`, which asserts a bare `%`
+returns zero rows while an unfiltered query returns many.
+
+---
+
+## D32 — Rate limiting keyed by subject, falling back to IP
+
+**Decision.** `rate_limit_key` prefers the JWT `sub` claim, read *without*
+signature verification, and falls back to the client address.
+
+**Why.** Keying purely on IP would let one user behind a shared institutional
+NAT exhaust the budget for their entire lab — a realistic scenario for research
+networks with a single egress address.
+
+**Why unverified decoding is safe here.** The value selects a rate-limit bucket
+and grants no access. A forged token can at worst move an attacker into a
+different bucket, which does not help them. The authorization path verifies
+signatures properly; conflating the two would be the mistake.
+
+---
+
+## D33 — Test pollution fixed by scoping, not by deleting rows
+
+**Problem.** Ten audit tests passed in isolation but failed in the full suite.
+The API tests run first and commit 232 audit rows for `u-broad-research`, so
+assertions like `len(entries) == 1` saw 233.
+
+**Decision.** Each audit test gets a unique random actor id via fixture.
+
+**Why not clean the table.** The append-only design deliberately makes deletion
+impossible for the app role. Granting a test path the ability to delete audit
+rows would weaken the exact property `test_app_role_cannot_delete_audit_entries`
+verifies. Scoping the assertions is the fix that does not compromise the
+control.
+
+**Verified.** Suite passes twice consecutively (data accumulating between runs)
+and with the file order reversed. A fix that only worked once would not be a
+fix.
+
+---
+
+## D34 — Defense-in-depth demonstrated by deliberate sabotage
+
+**Observation.** With the application-layer `authorize()` gate deleted from the
+query endpoint, only 2 of 46 API security tests failed —
+`test_idor_within_own_tenant_without_grant_is_denied` and
+`test_auditor_cannot_read_dataset_contents`.
+
+**Every cross-tenant IDOR test still passed**, because PostgreSQL RLS blocked
+those requests independently. That is the defense-in-depth claim demonstrated
+rather than asserted: one full layer removed, and tenant isolation held.
+
+The two tests that did fail are exactly the cases RLS cannot cover — a
+*within*-tenant grant check and a role-capability check, neither of which is
+expressible as a row filter. That division of labour is the reason both layers
+exist.
+
+---
+
 ## OPEN-1 — `rotate_kek` script referenced but not yet written
 
 `docs/key-rotation.md` step 3 documents

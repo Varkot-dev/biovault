@@ -28,9 +28,27 @@ BROAD = "lab-broad"
 SANGER = "lab-sanger"
 
 
-def researcher(tenant: str = BROAD, grants: frozenset[str] = frozenset({"ds-1"})) -> Principal:
+@pytest.fixture
+def actor_id() -> str:
+    """A unique actor per test.
+
+    The audit table is append-only by design, so rows written by earlier tests
+    (and by the API suite) persist. Scoping each test to its own actor makes
+    the assertions independent of execution order without weakening the
+    immutability guarantee that makes cleanup impossible.
+    """
+    import uuid
+
+    return f"u-audit-test-{uuid.uuid4().hex[:12]}"
+
+
+def researcher(
+    actor: str,
+    tenant: str = BROAD,
+    grants: frozenset[str] = frozenset({"ds-1"}),
+) -> Principal:
     return Principal(
-        user_id="u-broad-research", tenant_id=tenant, role=Role.RESEARCHER, dataset_grants=grants
+        user_id=actor, tenant_id=tenant, role=Role.RESEARCHER, dataset_grants=grants
     )
 
 
@@ -42,39 +60,41 @@ def _entries(session, actor: str) -> list[AuditEntry]:
     )
 
 
-def test_granted_access_is_recorded(owner_session) -> None:
+def test_granted_access_is_recorded(owner_session, actor_id: str) -> None:
     decision = authorize(
         owner_session,
-        principal=researcher(),
+        principal=researcher(actor_id),
         action=Action.READ,
         resource=ResourceRef(tenant_id=BROAD, dataset_id="ds-1"),
     )
     assert decision.allowed is True
 
-    entries = _entries(owner_session, "u-broad-research")
+    entries = _entries(owner_session, actor_id)
     assert len(entries) == 1
     assert entries[0].allowed is True
     assert entries[0].action == "read"
     assert entries[0].reason
 
 
-def test_denied_access_is_recorded(owner_session) -> None:
+def test_denied_access_is_recorded(owner_session, actor_id: str) -> None:
     """The case that matters most and is most often missed."""
     decision = authorize(
         owner_session,
-        principal=researcher(),
+        principal=researcher(actor_id),
         action=Action.DELETE,
         resource=ResourceRef(tenant_id=BROAD, dataset_id="ds-1"),
     )
     assert decision.allowed is False
 
-    entries = _entries(owner_session, "u-broad-research")
+    entries = _entries(owner_session, actor_id)
     assert len(entries) == 1
     assert entries[0].allowed is False
     assert "capability" in entries[0].reason
 
 
-def test_cross_tenant_denial_is_recorded_under_the_principals_tenant(owner_session) -> None:
+def test_cross_tenant_denial_is_recorded_under_the_principals_tenant(
+    owner_session, actor_id: str
+) -> None:
     """Attribution matters for two reasons.
 
     Ownership: the attempting user's own lab needs to see the probe.
@@ -83,28 +103,30 @@ def test_cross_tenant_denial_is_recorded_under_the_principals_tenant(owner_sessi
     """
     authorize(
         owner_session,
-        principal=researcher(tenant=BROAD),
+        principal=researcher(actor_id, tenant=BROAD),
         action=Action.READ,
         resource=ResourceRef(tenant_id=SANGER, dataset_id="ds-sanger-onco-1"),
     )
 
-    entry = _entries(owner_session, "u-broad-research")[0]
+    entry = _entries(owner_session, actor_id)[0]
     assert entry.allowed is False
     assert entry.tenant_id == BROAD, "audit row must belong to the attempting lab"
     assert "cross-tenant" in entry.reason
 
 
-def test_every_decision_records_actor_action_resource_and_reason(owner_session) -> None:
+def test_every_decision_records_actor_action_resource_and_reason(
+    owner_session, actor_id: str
+) -> None:
     """The four fields the spec names as required."""
     authorize(
         owner_session,
-        principal=researcher(),
+        principal=researcher(actor_id),
         action=Action.READ,
         resource=ResourceRef(tenant_id=BROAD, dataset_id="ds-1", record_id="rec-9"),
     )
-    entry = _entries(owner_session, "u-broad-research")[0]
+    entry = _entries(owner_session, actor_id)[0]
 
-    assert entry.actor_id == "u-broad-research"
+    assert entry.actor_id == actor_id
     assert entry.actor_role == "researcher"
     assert entry.action == "read"
     assert entry.resource_type == "record"
@@ -114,36 +136,40 @@ def test_every_decision_records_actor_action_resource_and_reason(owner_session) 
 
 
 @pytest.mark.parametrize("action", list(Action))
-def test_every_action_type_produces_an_entry(owner_session, action: Action) -> None:
+def test_every_action_type_produces_an_entry(
+    owner_session, actor_id: str, action: Action
+) -> None:
     """No action may slip through unaudited, whatever its outcome."""
     authorize(
         owner_session,
-        principal=researcher(),
+        principal=researcher(actor_id),
         action=action,
         resource=ResourceRef(tenant_id=BROAD, dataset_id="ds-1"),
     )
-    assert len(_entries(owner_session, "u-broad-research")) == 1
+    assert len(_entries(owner_session, actor_id)) == 1
 
 
-def test_repeated_attempts_each_produce_a_row(owner_session) -> None:
+def test_repeated_attempts_each_produce_a_row(owner_session, actor_id: str) -> None:
     """A brute-force pattern must be visible as repeated denials."""
     for _ in range(5):
         authorize(
             owner_session,
-            principal=researcher(tenant=BROAD),
+            principal=researcher(actor_id, tenant=BROAD),
             action=Action.READ,
             resource=ResourceRef(tenant_id=SANGER, dataset_id="ds-sanger-onco-1"),
         )
-    entries = _entries(owner_session, "u-broad-research")
+    entries = _entries(owner_session, actor_id)
     assert len(entries) == 5
     assert all(e.allowed is False for e in entries)
 
 
-def test_authorize_returns_the_same_decision_as_the_policy(owner_session) -> None:
+def test_authorize_returns_the_same_decision_as_the_policy(
+    owner_session, actor_id: str
+) -> None:
     """Auditing must not alter the decision it records."""
     from biovault.authz.policy import decide
 
-    principal = researcher()
+    principal = researcher(actor_id)
     resource = ResourceRef(tenant_id=BROAD, dataset_id="ds-1")
 
     audited = authorize(

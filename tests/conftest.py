@@ -63,6 +63,27 @@ def app_connection(app_engine_fixture: Engine) -> Iterator[Connection]:
         conn.close()
 
 
+@pytest.fixture(scope="session")
+def live_settings():
+    """Real settings from the environment, for end-to-end API tests.
+
+    Skips when the database is unreachable or configuration is incomplete, so
+    the unit suite still runs without Docker. CI sets
+    BIOVAULT_REQUIRE_INTEGRATION=1, which turns those skips into failures via
+    tests/security/test_suite_integrity.py.
+    """
+    from biovault.config import get_settings
+
+    try:
+        settings = get_settings()
+    except Exception as exc:  # noqa: BLE001 - configuration is incomplete locally
+        pytest.skip(f"settings unavailable: {exc}")
+
+    if not _database_available(settings.database_url(as_owner=False)):
+        pytest.skip("PostgreSQL not reachable")
+    return settings
+
+
 def _owner_url() -> str:
     user = os.environ.get("POSTGRES_USER", "biovault_owner")
     password = os.environ.get("POSTGRES_PASSWORD", "")
