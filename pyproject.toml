@@ -1,0 +1,70 @@
+[project]
+name = "biovault"
+version = "0.1.0"
+description = "Role-based access control for multi-institution genomics datasets"
+requires-python = ">=3.13"
+
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn[standard]==0.52.1",
+    "pydantic==2.13.4",
+    "pydantic-settings==2.14.2",
+    "sqlalchemy==2.0.51",
+    "alembic==1.18.5",
+    "psycopg[binary]==3.3.4",
+    "pyjwt==2.13.0",
+    "authlib==1.7.2",
+    "cryptography==50.0.0",
+    "slowapi==0.1.10",
+    "python-multipart==0.0.32",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "pytest-asyncio==1.4.0",
+    "httpx==0.28.1",
+    "pip-audit==2.10.1",
+    "ruff==0.16.1",
+]
+
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "security: negative-case security tests (access control, auth, crypto)",
+    "integration: requires a live PostgreSQL instance",
+    "rls: verifies PostgreSQL row-level security independently of the app layer",
+]
+filterwarnings = ["error::DeprecationWarning:biovault.*"]
+
+[tool.coverage.run]
+source = ["src/biovault"]
+branch = true
+omit = ["*/migrations/*", "*/__main__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "S", "UP", "ANN"]
+ignore = ["ANN401"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S105", "S106", "ANN"]
