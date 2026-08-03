@@ -131,6 +131,72 @@ claims. The spec's honesty rule makes that distinction worth the extra step.
 
 ---
 
+## D8 — Policy as an ordered gate chain where gates can only deny
+
+**Decision.** `decide()` runs four gates in order — tenant, capability, dataset
+grant, record sensitivity. Every gate may only return a denial. A grant is
+returned solely by falling through all four.
+
+**Why.** Default-deny becomes structural instead of aspirational. Adding a new
+`Action` to the enum without a matching entry in `_CAPABILITIES` results in
+denial by construction — the capability gate finds nothing and denies. The
+opposite shape (accumulating permissions and granting if any matched) fails
+open when someone forgets a case.
+
+**Ordering matters.** The tenant gate runs first and unconditionally, including
+for `lab_admin`. No later gate can re-grant what it denied, so tenant isolation
+cannot be undone by any subsequent rule.
+
+---
+
+## D9 — `decide()` is pure; audit logging happens at the caller
+
+**Decision.** No I/O, no clock, no database access inside the policy function.
+
+**Why.** Purity is what makes exhaustive testing possible — the 160-combination
+sweep in `test_tenant_isolation_holds_across_entire_input_space` runs in
+milliseconds precisely because there is nothing to mock. The tradeoff is that
+audit logging must be enforced at the call site, which is handled by routing
+all endpoint checks through a single dependency (task #6/#7) rather than by
+trusting each endpoint to remember.
+
+---
+
+## D10 — Centralization enforced by AST inspection, not code review
+
+**Decision.** `test_no_role_comparisons_outside_the_policy_module` parses every
+source file and fails if any module outside `authz/policy.py` compares against
+a role.
+
+**Why.** The spec forbids scattered `if role ==` checks. A convention that is
+only documented gets violated during the first deadline. AST parsing rather
+than `grep` avoids false positives from strings and comments.
+
+**Verified to actually fail.** A temporary file containing
+`if user.role == Role.LAB_ADMIN` was added; the test failed with
+`assert not ['_tmp_violation.py:3']`, then passed after removal. A guard test
+that has never been observed failing is not known to work.
+
+---
+
+## D11 — PHI clearance gates disclosure, not destruction
+
+**Decision.** Gate 4 applies to `READ` and `WRITE` only. `DELETE` is exempt, so
+a `lab_admin` may delete a PHI record without PHI clearance.
+
+**Why.** Clearance is a confidentiality control: it governs who may *see*
+protected content. Deleting a record discloses nothing. Destruction is an
+integrity/availability concern, already gated by `DELETE` being a lab_admin-only
+capability. Conflating the two would mean the only person who can clean up a
+mis-uploaded PHI record is someone authorized to read it — which increases
+disclosure, not decreases it.
+
+**Guarded by.** `test_phi_clearance_gates_disclosure_not_destruction`, written
+specifically so this stays a decision rather than becoming an accident of gate
+ordering that someone later "fixes."
+
+---
+
 ## OPEN-1 — `rotate_kek` script referenced but not yet written
 
 `docs/key-rotation.md` step 3 documents
