@@ -13,6 +13,7 @@ from collections.abc import Callable, Iterator
 
 import pytest
 from sqlalchemy import Connection, Engine, create_engine, text
+from sqlalchemy.orm import Session
 
 
 def _database_available(url: str) -> bool:
@@ -59,6 +60,49 @@ def app_connection(app_engine_fixture: Engine) -> Iterator[Connection]:
         yield conn
     finally:
         conn.rollback()
+        conn.close()
+
+
+def _owner_url() -> str:
+    user = os.environ.get("POSTGRES_USER", "biovault_owner")
+    password = os.environ.get("POSTGRES_PASSWORD", "")
+    host = os.environ.get("POSTGRES_HOST", "localhost")
+    port = os.environ.get("POSTGRES_PORT", "5432")
+    database = os.environ.get("POSTGRES_DB", "biovault")
+    return f"postgresql+psycopg://{user}:{password}@{host}:{port}/{database}"
+
+
+@pytest.fixture(scope="session")
+def owner_engine_fixture() -> Iterator[Engine]:
+    """Engine bound to the schema owner.
+
+    Used only for tables that are not tenant-filtered (refresh tokens,
+    authorization codes) and for setup that legitimately spans tenants.
+    Never use this to assert tenant isolation — the owner bypasses nothing
+    here only because RLS is FORCEd, and relying on that would make the
+    isolation tests depend on a setting rather than on policy.
+    """
+    url = _owner_url()
+    if not _database_available(url):
+        pytest.skip("PostgreSQL not reachable as the owner role")
+    engine = create_engine(url, pool_pre_ping=True, future=True)
+    yield engine
+    engine.dispose()
+
+
+@pytest.fixture
+def owner_session(owner_engine_fixture: Engine) -> Iterator[Session]:
+    """An owner-role ORM session, rolled back after each test."""
+    from sqlalchemy.orm import Session as OrmSession
+
+    conn = owner_engine_fixture.connect()
+    trans = conn.begin()
+    session = OrmSession(bind=conn, future=True)
+    try:
+        yield session
+    finally:
+        session.close()
+        trans.rollback()
         conn.close()
 
 

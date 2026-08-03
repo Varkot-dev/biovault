@@ -310,6 +310,105 @@ all tables were empty, all of them would pass while proving nothing. The claim
 
 ---
 
+## D19 — Explicit JWT algorithm allowlist passed to `decode`
+
+**Decision.** `jwt.decode(..., algorithms=["HS256"])`. The token's own `alg`
+header is never consulted.
+
+**Why.** This is the `alg:none` bypass. A verifier that reads `alg` from the
+token accepts an unsigned token as valid, letting anyone mint arbitrary
+claims.
+
+**Proven, not assumed.** A forged `alg:none` token was constructed and shown to
+be *structurally valid* — `jwt.decode(..., verify_signature=False)` parses it
+and returns `{'sub': 'attacker', 'role': 'lab_admin', 'tenant': 'lab-broad'}`.
+The same token is rejected by `verify_access_token`. Demonstrating it parses
+cleanly matters: had the test passed because of malformed base64, it would have
+proven nothing about the allowlist. Case variants (`None`, `NONE`, `nOnE`) are
+covered too.
+
+---
+
+## D20 — `leeway=0` on expiry, and refresh tokens rejected as access tokens
+
+**Decision.** No clock-skew grace period. The `typ` claim is checked so a
+refresh token cannot be presented where an access token is expected.
+
+**Why.** Leeway is a deliberate extension of a stolen token's useful life. And
+since refresh tokens live 7 days versus 15 minutes for access tokens, accepting
+one as an access token would silently extend session lifetime by ~672x.
+
+---
+
+## D21 — Uniform error messages across all token failures
+
+**Decision.** Every failure path raises `TokenError("token verification failed")`.
+
+**Why.** Distinguishing "expired" from "bad signature" from "wrong audience"
+is an oracle an attacker can probe. `test_error_message_does_not_reveal_which_check_failed`
+asserts the message set has exactly one element across three different failure
+causes.
+
+---
+
+## D22 — PKCE: S256 only, `plain` explicitly refused
+
+**Decision.** `verify_challenge` raises on any method other than `S256`.
+
+**Why.** RFC 7636 permits `plain`, but an attacker positioned to intercept the
+authorization code can also read the plaintext challenge in the authorization
+request — so `plain` defends against nothing. Supporting it for compatibility
+would let a client downgrade itself out of protection.
+
+**Also.** Comparison uses `hmac.compare_digest`. A short-circuiting `==` leaks
+the expected challenge byte-by-byte under timing analysis.
+
+**Conformance checked independently.** `test_challenge_matches_rfc7636_s256_definition`
+computes `BASE64URL(SHA256(verifier))` inline rather than calling the
+implementation, so a self-consistent but non-conformant change would fail
+rather than pass.
+
+---
+
+## D23 — Refresh reuse detection runs before the expiry check
+
+**Decision.** In `rotate()`, the `used_at is not None` branch is evaluated
+before expiry.
+
+**Why.** An expired *and* replayed token is still evidence of theft. Checking
+expiry first would return "expired" and discard that signal, leaving the
+attacker's family intact. Order matters here for security, not just tidiness.
+
+**Guarded by.** `test_reuse_of_an_expired_token_still_revokes_the_family`.
+
+---
+
+## D24 — Reuse revokes the whole family, and the successor dies with it
+
+**Decision.** On replay, every token sharing the `family_id` is revoked —
+including the successor the attacker just obtained.
+
+**Why.** The server cannot distinguish the thief from the victim; both present
+a token descended from the same login. Revoking only the replayed token would
+leave the attacker holding a valid successor, making detection pointless.
+Forcing both parties to re-authenticate is the only safe resolution.
+
+**Guarded by.** `test_successor_is_unusable_after_reuse_revokes_the_family`,
+which is the test that would catch a "revoke just this token" regression.
+
+---
+
+## D25 — Test assertion corrected rather than code changed
+
+`test_reuse_detection_survives_a_long_rotation_chain` initially asserted 7
+tokens in the family. The real count is 6 — initial plus five successors. The
+replay attempt raises *before* minting anything, which is correct: a detected
+replay must not issue a token. The assertion was wrong, not the implementation.
+Noted because the honesty rule cuts both ways — a failing test is not
+automatically a bug in the code.
+
+---
+
 ## OPEN-1 — `rotate_kek` script referenced but not yet written
 
 `docs/key-rotation.md` step 3 documents
