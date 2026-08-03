@@ -10,6 +10,40 @@ security as a second, independent isolation layer.
 re-run.** Numbers were measured, not estimated. Where something is incomplete,
 it says so.
 
+## Measured results
+
+Last run against a freshly wiped database (`docker compose down -v`, rebuild,
+re-bootstrap):
+
+```
+268 passed          87.95% coverage (floor: 80%)
+```
+
+| Suite | Tests |
+|---|---:|
+| Authorization policy (`test_policy.py`) | 74 |
+| API access control — IDOR, SQLi, roles, PHI | 46 |
+| JWT attacks — `alg:none`, tamper, expiry, escalation | 28 |
+| RLS tenant isolation, via raw SQL | 27 |
+| Envelope encryption | 24 |
+| PKCE | 22 |
+| Audit log completeness and immutability | 15 |
+| Refresh rotation and reuse detection | 13 |
+| Bootstrap and RLS installation | 6 |
+| Master-key rotation | 6 |
+| Policy centralization (AST guard) | 5 |
+| Suite-integrity guards | 2 |
+| **Total** | **268** |
+
+170 tests carry the `security` marker. `pip-audit`: 72 packages, no known
+vulnerabilities.
+
+Coverage is 100% on `authz/policy.py`'s decision paths (97% file),
+`db/rls.py`, `audit/recorder.py`, `auth/refresh.py`, and `auth/pkce.py` — the
+modules the security claims rest on. `db/bootstrap.py` sits at 30%; it is
+startup glue exercised end-to-end by `docker compose up` rather than by unit
+tests.
+
 ---
 
 ## Quick start
@@ -45,6 +79,7 @@ a running PostgreSQL — `docker compose up -d db` first.
 | Refresh-token rotation with reuse detection | `pytest tests/security/test_refresh_rotation.py` |
 | IDOR and SQL injection blocked over HTTP | `pytest tests/security/test_api_access_control.py` |
 | Audit log completeness and immutability | `pytest tests/security/test_audit_log.py` |
+| Master-key rotation without re-encrypting data | `pytest tests/integration/test_key_rotation.py` |
 | Full suite | `pytest tests/ -q` |
 | Coverage | `pytest tests/ --cov --cov-report=term` |
 

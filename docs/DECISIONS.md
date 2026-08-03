@@ -561,12 +561,90 @@ exist.
 
 ---
 
-## OPEN-1 — `rotate_kek` script referenced but not yet written
+## D35 — CI gates coverage with `--cov-fail-under`, not a custom parser
 
-`docs/key-rotation.md` step 3 documents
-`python -m biovault.scripts.rotate_kek --from kek-1 --to kek-2`. The
-`rewrap_data_key` primitive it depends on exists and is tested, but the CLI
-wrapper does not exist yet. It needs the database layer (task #4) first.
+**Decision.** The first draft wrote `coverage.xml` and parsed it in Python to
+enforce the floor. Replaced with coverage.py's own `--cov-fail-under=80`.
 
-**Must be resolved before the README claims key rotation is operational.**
-Tracked so the doc does not silently become a false claim.
+**Why.** A tooling hook flagged the stdlib XML parser as XXE-prone. The better
+fix was removing the parsing step entirely rather than reaching for
+`defusedxml`: a hand-rolled gate has a silent-pass failure mode. If
+`coverage.xml` were never written — test crash, wrong path, changed flag — a
+parser that caught the exception or defaulted to `0` would let the build
+through. Letting the tool that owns the data enforce its own threshold has no
+such gap.
+
+---
+
+## D36 — `pip-audit` runs against a frozen requirements list
+
+**Decision.** `pip freeze --exclude-editable` into a file, then
+`pip-audit --strict -r <file>`.
+
+**Why.** A bare `pip-audit --strict` fails with
+`biovault: Dependency not found on PyPI` because our own package is installed
+editable and unpublished. `--skip-editable` also errors under `--strict`. Both
+produce a red build that *looks* like a vulnerability finding but is a
+configuration error — the worst kind of CI failure, because it trains people to
+ignore the job.
+
+**Measured.** 72 packages audited, no known vulnerabilities.
+
+---
+
+## D37 — CI asserts RLS preconditions in SQL before running any test
+
+**Decision.** The `security-smoke` job runs a `DO $$ ... $$` block that raises
+unless RLS is enabled *and* forced on all six tenant-scoped tables, and unless
+`biovault_app` lacks both `SUPERUSER` and `BYPASSRLS`.
+
+**Why.** Those are the conditions under which the isolation tests are
+meaningful. Without them the tests would pass while proving nothing — the
+failure mode this project most needs to avoid.
+
+**Verified to fail.** `NO FORCE ROW LEVEL SECURITY` on a single table made the
+block exit 3 with `RLS not enabled/forced on 1 table(s)`. A guard never
+observed failing is not known to work.
+
+---
+
+## RESOLVED-1 — `rotate_kek` script now exists and is verified
+
+Previously tracked as OPEN-1: `docs/key-rotation.md` documented a CLI that had
+not been written.
+
+**Now implemented** at `src/biovault/scripts/rotate_kek.py` with `--dry-run`,
+and exercised end-to-end against the live database:
+
+```
+BEFORE                    kek-1 | 4
+DRY RUN                   would rotate 4 dataset key(s)   → kek-1 | 4  (unchanged)
+ROTATE                    rotated 4 dataset key(s)        → kek-2 | 4
+plaintext before          BRCA1:c.0000A>T:GT=0/1:DP=42;dataset=ds-broad-cohort-1;idx=0
+plaintext after (new KEK) BRCA1:c.0000A>T:GT=0/1:DP=42;dataset=ds-broad-cohort-1;idx=0
+```
+
+`test_rotation_preserves_plaintext_without_touching_ciphertext` additionally
+asserts the record's `payload_ciphertext` column is **byte-identical** across
+rotation, which is the actual proof that bulk data was never re-encrypted —
+the entire operational justification for envelope encryption.
+
+The script aborts the whole run if any key fails to unwrap, rather than leaving
+a half-rotated estate that would make "is anything still on the old key?"
+unanswerable.
+
+---
+
+## Final measured state
+
+Clean database (`docker compose down -v`, rebuild, re-bootstrap), full run:
+
+```
+268 passed          87.95% coverage (floor 80%)          ruff: clean
+pip-audit: 72 packages, no known vulnerabilities
+```
+
+100% coverage on the modules the security claims rest on: `db/rls.py`,
+`audit/recorder.py`, `auth/refresh.py`, `auth/pkce.py`, `api/dependencies.py`.
+`authz/policy.py` is at 97%. `db/bootstrap.py` sits at 30% — startup glue
+verified end-to-end by `docker compose up` rather than by unit tests.
