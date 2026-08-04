@@ -12,6 +12,7 @@ from datetime import datetime
 from sqlalchemy import (
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     String,
@@ -195,6 +196,36 @@ class AuditEntry(Base):
     resource_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     allowed: Mapped[bool] = mapped_column(Boolean, nullable=False)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class PrivacyBudgetEntry(Base):
+    """One debit against a tenant's differential-privacy budget.
+
+    Append-only, like the audit log and for the same reason: a tenant able to
+    delete its own budget entries has an unlimited query allowance, which
+    removes the privacy guarantee entirely. UPDATE and DELETE are revoked from
+    the application role at the GRANT level.
+
+    `query_fingerprint` records what the budget was spent on, making a
+    repeated-query averaging attack visible to an auditor as a run of
+    identical fingerprints.
+    """
+
+    __tablename__ = "privacy_budget_entries"
+    __table_args__ = (
+        Index("ix_privacy_budget_tenant", "tenant_id"),
+        Index("ix_privacy_budget_occurred", "occurred_at"),
+        Index("ix_privacy_budget_fingerprint", "query_fingerprint"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    actor_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    epsilon_spent: Mapped[float] = mapped_column(Float, nullable=False)
+    query_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

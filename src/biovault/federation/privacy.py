@@ -1,0 +1,205 @@
+"""Differential privacy for federated cohort counts.
+
+The problem this solves: three labs each hold genomic cohorts. The
+scientifically valuable question — "how many patients across all three labs
+carry this variant?" — currently cannot be asked, because answering it means
+one lab shipping records to another, which consent agreements and GDPR forbid.
+
+So the query never gets asked, and the science does not happen.
+
+This module makes the aggregate answerable without any lab seeing another's
+records. Each lab computes its own count locally; only noised counts leave the
+tenant boundary.
+
+## Why a raw count is not safe
+
+An exact count is a disclosure. Suppose an attacker knows a cohort has 100
+patients and queries "carriers of variant X" → 7. They then query a filter
+matching the same cohort minus one specific patient → 6. Subtracting reveals
+that patient's genotype exactly. This is the *differencing attack*, and it does
+not require any bug — it works against a perfectly correct exact-count API.
+
+## Why noise alone is not enough
+
+Adding Laplace noise to each answer blunts a single differencing attempt. But
+noise is zero-mean: repeat the same query 1000 times and average, and the noise
+cancels, recovering the true value. Differential privacy is only meaningful
+with a *budget* that is spent and cannot be replenished — which is why
+`budget.py` exists and why the two must be used together.
+
+## Parameters
+
+Epsilon (ε) is the privacy loss parameter: smaller means more noise and
+stronger privacy. For counting queries the sensitivity is 1 — one person
+joining or leaving changes any count by at most 1 — so Laplace noise with
+scale `1/ε` gives ε-differential privacy.
+"""
+
+from __future__ import annotations
+
+import math
+import secrets
+from typing import Final
+
+from pydantic import BaseModel, ConfigDict
+
+# Sensitivity of a counting query: adding or removing one individual changes
+# the result by at most 1.
+COUNT_SENSITIVITY: Final[float] = 1.0
+
+# Counts below this are suppressed entirely rather than noised. Noise protects
+# against inference from a *distribution*; it cannot hide the difference
+# between "nobody" and "somebody" when the true count is 1, because the
+# attacker often knows the answer is small already.
+MIN_COHORT_SIZE: Final[int] = 5
+
+# Bounds on epsilon per query. Above the maximum the noise is too small to
+# protect anyone; below the minimum the answer is pure noise and wastes budget
+# for no scientific value.
+MIN_EPSILON: Final[float] = 0.01
+MAX_EPSILON: Final[float] = 1.0
+
+
+class PrivacyError(Exception):
+    """Raised when a query cannot be answered within privacy constraints."""
+
+
+class NoisyCount(BaseModel):
+    """A differentially private count.
+
+    `suppressed` is part of the answer, not an error: telling the analyst that
+    a stratum was too small is itself useful, and hiding the distinction would
+    make a suppressed cell indistinguishable from a genuine zero.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    value: int | None
+    suppressed: bool
+    epsilon_spent: float
+    noise_scale: float
+
+
+def _laplace_noise(scale: float) -> float:
+    """Sample from Laplace(0, scale) using a cryptographic RNG.
+
+    `secrets` rather than `random`: the Mersenne Twister behind `random` is
+    fully reconstructible from ~624 outputs, so an attacker who observed enough
+    query responses could predict subsequent noise and subtract it — removing
+    the privacy guarantee entirely while every test still passed.
+
+    Uses inverse transform sampling on a uniform in (0, 1).
+    """
+    # secrets.randbits gives uniform integers; scale into the open interval
+    # (0, 1) to keep log() finite at both ends.
+    precision = 1 << 53
+    uniform = (secrets.randbits(53) + 0.5) / precision
+
+    # Inverse CDF of Laplace(0, b): -b * sgn(u - 0.5) * ln(1 - 2|u - 0.5|)
+    centred = uniform - 0.5
+    return -scale * math.copysign(1.0, centred) * math.log1p(-2.0 * abs(centred))
+
+
+def validate_epsilon(epsilon: float) -> None:
+    """Reject epsilon values outside the safe operating range.
+
+    Raises:
+        PrivacyError: If epsilon is non-finite or out of bounds.
+    """
+    if not math.isfinite(epsilon):
+        raise PrivacyError("epsilon must be a finite number")
+    if epsilon < MIN_EPSILON:
+        raise PrivacyError(
+            f"epsilon {epsilon} is below the minimum {MIN_EPSILON}; "
+            "the answer would be pure noise and would still consume budget"
+        )
+    if epsilon > MAX_EPSILON:
+        raise PrivacyError(
+            f"epsilon {epsilon} exceeds the maximum {MAX_EPSILON}; "
+            "noise would be too small to protect individuals"
+        )
+
+
+def privatize_count(
+    true_count: int,
+    *,
+    epsilon: float,
+    min_cohort_size: int = MIN_COHORT_SIZE,
+) -> NoisyCount:
+    """Return a differentially private version of `true_count`.
+
+    Args:
+        true_count: The exact count. Never returned or logged.
+        epsilon: Privacy loss for this query. Smaller is more private.
+        min_cohort_size: Counts at or below this are suppressed.
+
+    Raises:
+        PrivacyError: If epsilon is outside the permitted range.
+    """
+    validate_epsilon(epsilon)
+
+    if true_count < 0:
+        raise PrivacyError("count cannot be negative")
+
+    scale = COUNT_SENSITIVITY / epsilon
+
+    # Suppression is decided on the TRUE count, before noise. Deciding on the
+    # noised value would leak: an attacker could observe whether suppression
+    # triggered and infer which side of the threshold the truth fell on.
+    if true_count <= min_cohort_size:
+        return NoisyCount(
+            value=None, suppressed=True, epsilon_spent=epsilon, noise_scale=scale
+        )
+
+    noised = true_count + _laplace_noise(scale)
+
+    # Clamp at zero. A negative count is nonsense to an analyst, and post-
+    # processing a DP result never weakens the guarantee.
+    return NoisyCount(
+        value=max(0, round(noised)),
+        suppressed=False,
+        epsilon_spent=epsilon,
+        noise_scale=scale,
+    )
+
+
+def combine_federated_counts(
+    counts: list[NoisyCount], *, min_contributing_sites: int = 2
+) -> NoisyCount:
+    """Sum per-site noisy counts into a federated total.
+
+    Each site noises its own count before release, so the sum is the sum of
+    independent DP releases and remains differentially private. Noise variance
+    adds, which is the honest cost of federation: the total is less precise
+    than any single site's answer would be.
+
+    Args:
+        counts: One noisy count per participating site.
+        min_contributing_sites: Below this, the result is suppressed.
+
+    Raises:
+        PrivacyError: If no counts are supplied.
+    """
+    if not counts:
+        raise PrivacyError("no sites contributed to this query")
+
+    contributing = [c for c in counts if not c.suppressed and c.value is not None]
+    total_epsilon = sum(c.epsilon_spent for c in counts)
+
+    # With a single contributing site the "federated" total is that site's
+    # count, which re-identifies which lab holds the cohort. Requiring two
+    # keeps the aggregate genuinely aggregate.
+    if len(contributing) < min_contributing_sites:
+        return NoisyCount(
+            value=None,
+            suppressed=True,
+            epsilon_spent=total_epsilon,
+            noise_scale=max((c.noise_scale for c in counts), default=0.0),
+        )
+
+    return NoisyCount(
+        value=sum(c.value for c in contributing if c.value is not None),
+        suppressed=False,
+        epsilon_spent=total_epsilon,
+        noise_scale=math.sqrt(sum(c.noise_scale**2 for c in contributing)),
+    )

@@ -32,12 +32,13 @@ TENANT_SCOPED_TABLES: Final[tuple[str, ...]] = (
     "genomic_records",
     "dataset_grants",
     "audit_entries",
+    "privacy_budget_entries",
 )
 
 # Audit entries are append-only: the app role may INSERT and SELECT but never
 # UPDATE or DELETE. Enforced by GRANT, so a compromised application cannot
 # rewrite its own trail.
-APPEND_ONLY_TABLES: Final[tuple[str, ...]] = ("audit_entries",)
+APPEND_ONLY_TABLES: Final[tuple[str, ...]] = ("audit_entries", "privacy_budget_entries")
 
 # Tables consulted before a tenant is known. Not tenant-scoped by design:
 # both are keyed by unguessable high-entropy secrets, so there is no
@@ -82,6 +83,15 @@ def apply_rls_policies(connection: Connection, *, app_role: str) -> None:
         connection.execute(
             text(f"GRANT SELECT, INSERT, UPDATE ON {table} TO {app_role}")
         )
+
+    # The tenant registry is readable but never writable by the application.
+    # Federated queries must enumerate participating sites, and a lab's
+    # existence is not a secret — every participant knows who is in the
+    # consortium. What each lab *holds* remains protected by the policies
+    # above. SELECT only: an application able to create tenants could mint an
+    # isolation boundary of its own choosing.
+    connection.execute(text(f"GRANT SELECT ON tenants TO {app_role}"))
+    connection.execute(text(f"REVOKE INSERT, UPDATE, DELETE ON tenants FROM {app_role}"))
 
 
 def _ensure_app_role(connection: Connection, *, app_role: str) -> None:

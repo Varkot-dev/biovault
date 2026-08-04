@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from biovault.api.rate_limit import limiter
-from biovault.api.routes import audit, auth, datasets
+from biovault.api.routes import audit, auth, datasets, federation
 from biovault.api.security_headers import SecurityHeadersMiddleware
 
 logger = logging.getLogger(__name__)
@@ -27,6 +27,7 @@ app.add_middleware(SlowAPIMiddleware)
 app.include_router(auth.router)
 app.include_router(datasets.router)
 app.include_router(audit.router)
+app.include_router(federation.router)
 
 
 @app.exception_handler(RateLimitExceeded)

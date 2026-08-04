@@ -44,6 +44,13 @@ class Action(StrEnum):
     DELETE = "delete"
     MANAGE_GRANTS = "manage_grants"
     READ_AUDIT = "read_audit"
+    # Federated aggregate queries spanning tenants. Deliberately distinct from
+    # READ: it returns only differentially private aggregates, never records,
+    # and is governed by the privacy budget rather than by dataset grants.
+    # Modelling it as READ would have been wrong in both directions — it would
+    # require a dataset grant the query does not need, and it would imply
+    # record access the query must never confer.
+    QUERY_FEDERATED = "query_federated"
 
 
 class Principal(BaseModel):
@@ -98,9 +105,15 @@ class Decision(BaseModel):
 # and record gates run afterwards.
 _CAPABILITIES: Final[dict[Role, frozenset[Action]]] = {
     Role.LAB_ADMIN: frozenset(
-        {Action.READ, Action.WRITE, Action.DELETE, Action.MANAGE_GRANTS}
+        {
+            Action.READ,
+            Action.WRITE,
+            Action.DELETE,
+            Action.MANAGE_GRANTS,
+            Action.QUERY_FEDERATED,
+        }
     ),
-    Role.RESEARCHER: frozenset({Action.READ, Action.WRITE}),
+    Role.RESEARCHER: frozenset({Action.READ, Action.WRITE, Action.QUERY_FEDERATED}),
     Role.AUDITOR: frozenset({Action.READ_AUDIT}),
     Role.READ_ONLY: frozenset({Action.READ}),
 }
@@ -112,7 +125,9 @@ _TENANT_WIDE_ROLES: Final[frozenset[Role]] = frozenset({Role.LAB_ADMIN, Role.AUD
 
 # Actions that operate on the tenant rather than one dataset, and so are not
 # subject to the dataset-grant gate.
-_TENANT_SCOPED_ACTIONS: Final[frozenset[Action]] = frozenset({Action.READ_AUDIT})
+_TENANT_SCOPED_ACTIONS: Final[frozenset[Action]] = frozenset(
+    {Action.READ_AUDIT, Action.QUERY_FEDERATED}
+)
 
 # Actions that expose record contents, and so are subject to PHI clearance.
 _CONTENT_ACTIONS: Final[frozenset[Action]] = frozenset({Action.READ, Action.WRITE})
