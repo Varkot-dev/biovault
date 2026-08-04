@@ -529,14 +529,14 @@
           <tr><th>ε total</th><th>ε / query</th><th>Queries</th><th>Median error</th><th>Attacker wins</th></tr>
         </thead>
         <tbody>
-          <tr class="flag"><td>10.0</td><td>0.1</td><td>33</td><td>2.21</td><td>25.0% success</td></tr>
-          <tr class="pick"><td>1.0</td><td>0.1</td><td>3</td><td>7.00</td><td>8.0% success</td></tr>
+          <tr class="flag"><td>10.0</td><td>0.1</td><td>33</td><td>4.48</td><td>14.2% success</td></tr>
+          <tr class="pick"><td>1.0</td><td>0.1</td><td>3</td><td>14.67</td><td>4.5% success</td></tr>
         </tbody>
       </table>
     </div>
     <p>
       <code>ε_total = 10.0</code> appears in plenty of tutorials and lets an attacker state a
-      specific person's genotype in a quarter of attempts. Try the tutorial preset and hit
+      specific person's genotype in roughly one attempt in seven. Try the tutorial preset and hit
       <em>Run 400 full attacks</em>.
     </p>
 
@@ -585,13 +585,18 @@
   }
 
   function noisy(trueCount, eps) {
-    return Math.max(0, Math.round(trueCount + laplace(1 / eps)));
+    return Math.max(0, Math.round(trueCount + laplace(1 / (eps * COUNT_SHARE))));
   }
 
   // A federated query makes one Laplace release per site, so it costs
   // eps * SITES. Matches run_federated_cohort_query: charging eps once would
   // undercount privacy loss by the site multiplier.
   var SITES = 3;
+  // Half the per-query epsilon pays for the suppression decision, which is a
+  // DP release of its own -- comparing the true count to the threshold would
+  // publish an exact bit of "count > 5" for free. The count therefore sees
+  // half the budget, and twice the noise. Matches THRESHOLD_EPSILON_FRACTION.
+  var COUNT_SHARE = 0.5;
   function maxQueries() {
     return Math.floor(state.budget / (state.eps * SITES) + 1e-9);
   }
@@ -718,7 +723,7 @@
     $("k-err").textContent = "Error vs truth";
     $("r-queries").textContent = n + " / " + mx;
     $("r-est").textContent = est === null ? "—" : est.toFixed(2);
-    $("r-noise").textContent = (1 / state.eps).toFixed(1);
+    $("r-noise").textContent = (1 / (state.eps * COUNT_SHARE)).toFixed(1);
 
     var errEl = $("r-err");
     if (err === null) { errEl.textContent = "—"; errEl.className = "v"; }
@@ -749,7 +754,7 @@
         "Your estimate is <code>" + est.toFixed(2) + "</code> against a true difference of " +
         "<code>1</code>. After <code>" + n + "</code> quer" + (n === 1 ? "y" : "ies") +
         " you can state that person's genotype. At ε_total=<code>" + state.budget.toFixed(1) +
-        "</code> this happens in roughly <b>" + (state.budget >= 10 ? "25%" : state.budget >= 2 ? "15%" : "8%") +
+        "</code> this happens in roughly <b>" + (state.budget >= 10 ? "14%" : state.budget >= 2 ? "8%" : "5%") +
         "</b> of attempts — hit Reset and run it again.");
     } else if (final && err <= 2) {
       setVerdict("cut", "Near miss — off by " + err.toFixed(2),
@@ -887,18 +892,18 @@
     $("eps-val").textContent = state.eps.toFixed(2);
     // accuracy = -scale * ln(alpha); alpha=0.05 -> ln(20) ~ 3.0
     // Same formula as biovault.federation.accuracy.scale_to_tolerance.
-    $("ci-demo").textContent = "\u00b1" + (-(1 / state.eps) * Math.log(0.05)).toFixed(0);
+    $("ci-demo").textContent = "\u00b1" + (-(1 / (state.eps * COUNT_SHARE)) * Math.log(0.05)).toFixed(0);
     $("budget-val").textContent = state.budget.toFixed(2);
 
     var eh = $("eps-hint");
     if (state.eps >= 0.8) {
-      eh.textContent = "Noise scale " + (1 / state.eps).toFixed(1) + ". Barely any protection per answer.";
+      eh.textContent = "Noise scale " + (1 / (state.eps * COUNT_SHARE)).toFixed(1) + ". Barely any protection per answer.";
       eh.className = "ctl-hint bad";
     } else if (state.eps >= 0.4) {
-      eh.textContent = "Noise scale " + (1 / state.eps).toFixed(1) + ". Thin margin on a difference of 1.";
+      eh.textContent = "Noise scale " + (1 / (state.eps * COUNT_SHARE)).toFixed(1) + ". Thin margin on a difference of 1.";
       eh.className = "ctl-hint warn";
     } else {
-      eh.textContent = "Noise scale " + (1 / state.eps).toFixed(1) + ". Server caps ε at 1.0 per query.";
+      eh.textContent = "Noise scale " + (1 / (state.eps * COUNT_SHARE)).toFixed(1) + ". Server caps ε at 1.0 per query.";
       eh.className = "ctl-hint";
     }
 

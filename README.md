@@ -134,24 +134,25 @@ budget of 1.0 at ε=0.1 buys 3 queries. Over 400 full attacks each:
 
 | ε_total | queries allowed | attacker pins the individual (±1) |
 |---:|---:|---:|
-| 10.0 — *the tutorial default* | 33 | **25.0%** |
-| **1.0 — BioVault default** | 3 | **8.0%** |
+| 10.0 — *the tutorial default* | 33 | **14.2%** |
+| **1.0 — BioVault default** | 3 | **4.5%** |
 
 ε_total = 10.0 appears in plenty of DP tutorials. It lets an attacker state a
-specific person's genotype in **a quarter of attempts** — not a privacy
+specific person's genotype in roughly **one attempt in seven** — not a privacy
 guarantee in any useful sense.
 
 **What 1.0 does not do:** it does not defeat the differencing attack. It cuts
-the attacker's per-attempt success rate from ~25% to ~8%. Differential privacy
+the attacker's per-attempt success rate from ~14% to ~5%. Differential privacy
 bounds *expected* leakage; it does not eliminate it.
 
 Two corrections are recorded rather than quietly folded in, because a privacy
 claim you can't falsify isn't a claim. An earlier version of these docs said
 "differencing defeated" at ε=1.0 — wrong; a nonzero success rate is not defeat.
-And this table previously read 40.3%/14.3%, measured while the budget charged ε
-once per federated query instead of **once per site** — undercounting real
-privacy loss threefold. Fixing that accounting also tightened the actual
-guarantee, which is why the corrected figures are lower, not higher.
+This table has moved twice. It read 40.3%/14.3% while the budget charged ε once
+per federated query instead of **once per site** — undercounting real privacy
+loss threefold — and moved again when the suppression decision started paying
+for itself out of the same budget. Both fixes tightened the real guarantee,
+which is why the honest figures kept going down rather than up.
 
 Run the numbers yourself in the
 [demo](https://claude.ai/code/artifact/338d9894-9820-46f7-8833-b14c85b04555)

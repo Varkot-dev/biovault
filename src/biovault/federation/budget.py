@@ -49,25 +49,27 @@ from biovault.models.tables import PrivacyBudgetEntry
 # a true count of 500 under that accounting:
 #
 #     e_total   e/query   queries   median err   pins the individual (+/-1)
-#      10.0       0.1        33        2.21              25.0%
-#       1.0       0.1         3        7.00               8.0%
+#      10.0       0.1        33        4.48              14.2%
+#       1.0       0.1         3       14.67               4.5%
 #
 # e_total=10.0 appears in plenty of DP tutorials. It lets an attacker state a
-# specific person's genotype in a quarter of attempts, which is not a privacy
-# guarantee in any useful sense. 1.0 is therefore the default: restrictive by
+# specific person's genotype in roughly one attempt in seven, which is not a
+# privacy guarantee in any useful sense. 1.0 is therefore the default: restrictive by
 # design, because a genuinely private aggregate API answers few questions well
 # rather than many questions uselessly.
 #
 # What 1.0 does NOT do, stated plainly: it does not defeat the differencing
-# attack. It reduces the attacker's per-attempt success rate from ~25% to ~8%.
+# attack. It reduces the attacker's per-attempt success rate from ~14% to ~5%.
 # Differential privacy bounds *expected* leakage; it does not eliminate it, and
 # an individual attempt can still get lucky.
 #
-# Two corrections are recorded here rather than quietly folded in. An earlier
+# Corrections are recorded here rather than quietly folded in. An earlier
 # version called 1.0 "differencing defeated" -- wrong, a nonzero success rate
-# is not defeat. And these figures previously read 40.3%/14.3%, measured while
-# the budget charged e once per federated query instead of once per site. That
-# undercounted privacy loss threefold. Fixing it also tightened the real
+# is not defeat. The figures have moved twice since: first from 40.3%/14.3%
+# when the budget charged e once per federated query instead of once per site
+# (undercounting privacy loss threefold), then to these values when the
+# suppression decision started paying for itself, which halved the count's
+# share of epsilon and doubled its noise. Fixing it also tightened the real
 # guarantee, which is why the corrected numbers are lower rather than higher.
 #
 # Operators holding genuinely identifiable data should lower this further and
