@@ -85,16 +85,18 @@ curl "localhost:8000/federation/precision?epsilon=0.1&sites=3"
 #  "queries_affordable": 10, "confidence": 0.95}
 ```
 
-| ε | 95% tolerance | queries affordable |
+| ε | 95% tolerance | federated queries affordable (3 sites) |
 |---:|---:|---:|
-| 0.01 | ±299.6 | 100 |
-| 0.05 | ±59.9 | 20 |
-| 0.1 | ±30.0 | 10 |
-| 0.5 | ±6.0 | 2 |
-| 1.0 | ±3.0 | 1 |
+| 0.01 | ±299.6 | 33 |
+| 0.05 | ±59.9 | 6 |
+| 0.1 | ±30.0 | 3 |
+| 0.5 | ±6.0 | 0 |
+| 1.0 | ±3.0 | 0 |
 
-That table is the entire design space: precision and privacy trade directly
-against each other, and the budget caps how many times you can make the trade.
+That table is the entire design space, and it is deliberately uncomfortable:
+precision and privacy trade directly against each other, the budget caps how
+many times you can make the trade, and at high ε a single query exhausts
+everything. A system that let you have both would be lying about one of them.
 
 Sanger is suppressed automatically: its matching cohort was at or below the
 minimum size, where noise cannot hide the difference between *nobody* and
@@ -121,22 +123,29 @@ convention**.
 
 The right metric is an **attacker success rate**, not a median error — a median
 says what happens on a typical attempt, but an attacker only needs to succeed
-once. Over 400 full attacks each:
+once. A federated query costs ε × (number of sites), so across three labs a
+budget of 1.0 at ε=0.1 buys 3 queries. Over 400 full attacks each:
 
-| ε_total | queries allowed | attacker pins the individual (±1) | within ±2 |
-|---:|---:|---:|---:|
-| 10.0 — *the tutorial default* | 100 | **40.3%** | 68.3% |
-| **1.0 — BioVault default** | 10 | **14.3%** | 27.8% |
+| ε_total | queries allowed | attacker pins the individual (±1) |
+|---:|---:|---:|
+| 10.0 — *the tutorial default* | 33 | **25.0%** |
+| **1.0 — BioVault default** | 3 | **8.0%** |
 
 ε_total = 10.0 appears in plenty of DP tutorials. It lets an attacker state a
-specific person's genotype in roughly **two attempts out of five** — not a
-privacy guarantee in any useful sense.
+specific person's genotype in **a quarter of attempts** — not a privacy
+guarantee in any useful sense.
 
 **What 1.0 does not do:** it does not defeat the differencing attack. It cuts
-the attacker's per-attempt success rate from ~40% to ~14%. Differential privacy
-bounds *expected* leakage; it does not eliminate it. An earlier version of this
-project's own docs claimed "differencing defeated" at ε=1.0 — that was wrong,
-and the 400-trial measurement is what corrected it.
+the attacker's per-attempt success rate from ~25% to ~8%. Differential privacy
+bounds *expected* leakage; it does not eliminate it.
+
+Two corrections are recorded rather than quietly folded in, because a privacy
+claim you can't falsify isn't a claim. An earlier version of these docs said
+"differencing defeated" at ε=1.0 — wrong; a nonzero success rate is not defeat.
+And this table previously read 40.3%/14.3%, measured while the budget charged ε
+once per federated query instead of **once per site** — undercounting real
+privacy loss threefold. Fixing that accounting also tightened the actual
+guarantee, which is why the corrected figures are lower, not higher.
 
 Run the numbers yourself in the
 [demo](https://claude.ai/code/artifact/338d9894-9820-46f7-8833-b14c85b04555)

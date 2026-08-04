@@ -70,6 +70,11 @@ class NoisyCount(BaseModel):
     `suppressed` is part of the answer, not an error: telling the analyst that
     a stratum was too small is itself useful, and hiding the distinction would
     make a suppressed cell indistinguishable from a genuine zero.
+
+    `value` is clamped at zero for presentation. `raw_value` keeps the
+    unclamped float so that federated sums can be computed without compounding
+    clamping bias — see `combine_federated_counts`. It is never returned to a
+    caller.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -78,6 +83,7 @@ class NoisyCount(BaseModel):
     suppressed: bool
     epsilon_spent: float
     noise_scale: float
+    raw_value: float | None = None
 
 
 def _laplace_noise(scale: float) -> float:
@@ -153,13 +159,21 @@ def privatize_count(
 
     noised = true_count + _laplace_noise(scale)
 
-    # Clamp at zero. A negative count is nonsense to an analyst, and post-
-    # processing a DP result never weakens the guarantee.
+    # Clamp at zero for presentation. A negative count is nonsense to an
+    # analyst, and post-processing a DP result never weakens the guarantee.
+    #
+    # `raw_value` retains the unclamped float. Clamping is not symmetric --
+    # it truncates the negative tail only -- so summing already-clamped
+    # per-site values biases a federated total upward, badly for small
+    # cohorts. Measured at three sites with three records each and scale 10:
+    # the clamped sum averaged 20.07 against a true total of 9. Federated
+    # sums therefore use raw_value and clamp once at the end.
     return NoisyCount(
         value=max(0, round(noised)),
         suppressed=False,
         epsilon_spent=epsilon,
         noise_scale=scale,
+        raw_value=noised,
     )
 
 
@@ -197,9 +211,20 @@ def combine_federated_counts(
             noise_scale=max((c.noise_scale for c in counts), default=0.0),
         )
 
+    # Sum the UNCLAMPED per-site values, then clamp once. Summing clamped
+    # values compounds the truncation bias described in `privatize_count`;
+    # clamping only the final total keeps the estimator unbiased wherever the
+    # true total is comfortably positive, which is the regime an analyst can
+    # actually use.
+    raw_total = sum(
+        c.raw_value if c.raw_value is not None else float(c.value or 0)
+        for c in contributing
+    )
+
     return NoisyCount(
-        value=sum(c.value for c in contributing if c.value is not None),
+        value=max(0, round(raw_total)),
         suppressed=False,
         epsilon_spent=total_epsilon,
         noise_scale=math.sqrt(sum(c.noise_scale**2 for c in contributing)),
+        raw_value=raw_total,
     )

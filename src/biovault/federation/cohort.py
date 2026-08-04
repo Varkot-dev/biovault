@@ -186,17 +186,41 @@ def run_federated_cohort_query(
         # that pays for it, which is what makes per-tenant budgets meaningful.
         set_tenant_context(session.connection(), requesting_tenant)
 
+        # Sites must be enumerated BEFORE the charge, because the cost depends
+        # on how many of them there are.
+        sites = session.execute(select(Tenant.id).order_by(Tenant.id)).scalars().all()
+
+        # One query produces one Laplace release PER SITE, and the requester
+        # observes all of them. Under sequential composition the privacy cost
+        # is therefore epsilon * len(sites), not epsilon.
+        #
+        # Charging epsilon once would undercount by the site multiplier: with
+        # three labs, a budget of 1.0 at epsilon=0.1 would permit 10 queries
+        # and 30 releases while the ledger recorded 10. That is a real leak of
+        # 3x the stated amount, and it was how this function originally
+        # behaved.
+        #
+        # WHY SEQUENTIAL AND NOT PARALLEL COMPOSITION. If the labs held
+        # disjoint patient populations, parallel composition would apply and
+        # the true cost would be epsilon: a given person appears at exactly one
+        # site, so the releases do not compound for them. BioVault does not
+        # assume that. In a real genomics consortium patients DO appear at
+        # multiple institutions -- which is precisely why cross-lab queries are
+        # scientifically valuable -- and there is no way to detect overlap
+        # without linking identities across tenants, which the whole system
+        # exists to prevent. Sequential composition is the safe reading when
+        # overlap cannot be ruled out.
+        total_cost = query.epsilon * len(sites)
+
         # Charge first. This raises BudgetExhausted before anything is read.
         remaining = charge(
             session,
             tenant_id=requesting_tenant,
             actor_id=actor_id,
-            epsilon=query.epsilon,
+            epsilon=total_cost,
             query_fingerprint=query.fingerprint(),
             total_budget=total_budget,
         )
-
-        sites = session.execute(select(Tenant.id).order_by(Tenant.id)).scalars().all()
 
         per_site: list[NoisyCount] = []
         contributions: list[SiteContribution] = []
@@ -217,13 +241,13 @@ def run_federated_cohort_query(
 
         logger.info(
             "federated cohort query: actor=%s tenant=%s fingerprint=%s "
-            "sites=%d contributing=%d epsilon=%.3f remaining=%.3f",
+            "sites=%d contributing=%d epsilon_charged=%.3f remaining=%.3f",
             actor_id,
             requesting_tenant,
             query.fingerprint()[:12],
             len(sites),
             sum(1 for c in contributions if not c.suppressed),
-            query.epsilon,
+            total_cost,
             remaining,
         )
 
@@ -260,7 +284,7 @@ def run_federated_cohort_query(
             suppressed=combined.suppressed,
             sites_queried=len(sites),
             sites_contributing=sum(1 for c in contributions if not c.suppressed),
-            epsilon_spent=query.epsilon,
+            epsilon_spent=total_cost,
             epsilon_remaining=remaining,
             noise_scale=combined.noise_scale,
             contributions=contributions,

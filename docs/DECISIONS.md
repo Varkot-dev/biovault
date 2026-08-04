@@ -705,6 +705,78 @@ future reader does not have to rediscover why it is safe.
 
 ---
 
+## D41 — Federated queries cost ε × sites, not ε (bug fix)
+
+**The bug.** `run_federated_cohort_query` charged the budget once per query
+while calling `privatize_count` once per *site*. With three labs, one query
+made three Laplace releases and recorded 0.1. Actual privacy loss was 0.3.
+
+**Impact.** A tenant with a budget of 1.0 believed it had 10 queries and
+received 30 releases' worth of leakage. This also made the published
+attacker-success table wrong: it was calibrated against an accounting that
+undercounted threefold.
+
+**Confirmed empirically before fixing:**
+
+```
+sites queried            : 3
+Laplace releases made    : 3
+epsilon CHARGED to ledger: 0.1
+UNDERCOUNT FACTOR        : 3x
+```
+
+**Fix.** Enumerate sites before charging; charge `epsilon * len(sites)`; report
+the same figure. Affordable queries at the default drop from a false 10 to a
+true 3.
+
+**The composition question this exposed, now written down.** If the labs held
+*disjoint* patient populations, parallel composition would apply and ε would be
+the correct charge — a given person appears at one site, so the releases do not
+compound for them. BioVault does not assume disjointness. In a real genomics
+consortium patients appear at multiple institutions, which is exactly why
+cross-lab queries are valuable, and overlap cannot be detected without linking
+identities across tenants — the thing the system exists to prevent. Sequential
+composition is the safe reading. The original code assumed neither consistently:
+it charged as though populations were disjoint while releasing as though they
+were not.
+
+**The corrected numbers are better, not worse.** Attacker success at the default
+fell from a reported 14.3% to a measured 8.0%, and at the tutorial default from
+40.3% to 25.0%. Fixing the accounting tightened the real guarantee.
+
+---
+
+## D42 — Clamp once at the federated total, not per site (bug fix)
+
+**The bug.** Each site clamped its noised count at zero *before* the federated
+sum. Clamping truncates the negative tail only, so summing clamped values
+compounds an upward bias.
+
+**Measured, three sites at ε=0.1:**
+
+```
+true per site   clamped sum   truth   bias
+            3         20.07       9   +11.07
+            6         26.32      18    +8.32
+           10         35.53      30    +5.53
+          100        300.03     300    +0.03
+```
+
+A federated total more than double the truth for small cohorts — precisely the
+regime rare-variant genomics queries live in. The confidence interval was then
+centred on that biased estimate, so its nominal coverage of the *true* total
+was not what was delivered.
+
+**Fix.** `NoisyCount` carries `raw_value`, the unclamped float. Federated sums
+use it and clamp once at the end. Bias at three sites × six records fell from
++8.32 to +3.31, and to ~0.25 for cohorts large enough to be usable. The residual
+is the single final clamp, which is unavoidable.
+
+`raw_value` is never returned to a caller — it is an internal intermediate, not
+a second, less-noisy view of the data.
+
+---
+
 ## Final measured state
 
 Clean database (`docker compose down -v`, rebuild, re-bootstrap), full run:

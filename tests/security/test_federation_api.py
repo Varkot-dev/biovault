@@ -97,7 +97,10 @@ def test_researcher_receives_an_aggregate_spanning_all_labs(
 
     assert body["sites_queried"] == 3
     assert body["total"] is not None
-    assert body["epsilon_spent"] == pytest.approx(0.1)
+    # One Laplace release per site, so the cost is epsilon * sites. Charging
+    # epsilon once would undercount real privacy loss threefold.
+    assert body["epsilon_spent"] == pytest.approx(0.3)
+    assert body["interval"] is not None, "a count must never ship without its interval"
 
 
 def test_response_reports_which_sites_contributed(client, live_settings) -> None:
@@ -121,7 +124,8 @@ def test_repeated_identical_queries_return_different_answers(
 ) -> None:
     """Deterministic answers would be exact counts, not private ones."""
     answers = []
-    for _ in range(6):
+    # Budget permits 1.0 / (0.1 * 3) = 3 federated queries.
+    for _ in range(3):
         body = client.post(
             "/federation/cohort-count",
             json={"variant_prefix": "SPEC", "epsilon": 0.1},
@@ -260,7 +264,8 @@ def test_spending_reduces_reported_remaining_budget(client, live_settings) -> No
     )
 
     after = client.get("/federation/budget", headers=headers).json()["remaining"]
-    assert before - after == pytest.approx(0.1)
+    # epsilon * 3 sites
+    assert before - after == pytest.approx(0.3)
 
 
 def test_budgets_are_independent_across_tenants(client, live_settings) -> None:

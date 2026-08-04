@@ -40,39 +40,38 @@ from biovault.models.tables import PrivacyBudgetEntry
 
 # Total epsilon a tenant may spend within one window.
 #
-# Chosen by measuring the attack rather than by convention. The residual error
-# left to an attacker who exhausts the budget and averages every answer is
-# approximately (1/e_query) / sqrt(n), where n = total / e_query -- which
-# simplifies to 1 / (e_query * sqrt(n)). Measured median error in recovering a
-# true count of 500:
+# Chosen by measuring the attack rather than by convention, and reported as an
+# ATTACKER SUCCESS RATE rather than a median error -- a median says what
+# happens on a typical attempt, but an attacker only needs to succeed once.
 #
-# The right way to read this is as an ATTACKER SUCCESS RATE, not a median.
-# A median error says what happens on a typical attempt; an attacker only needs
-# to succeed once. Measured over 400 trials each, recovering a true count of
-# 500 by exhausting the budget and averaging:
+# A federated query costs e * len(sites), so with three labs a budget of 1.0 at
+# e=0.1 buys 3 queries, not 10. Measured over 400 full attacks each, recovering
+# a true count of 500 under that accounting:
 #
-#     total   e/query   queries   median err   within +/-1   within +/-2
-#      10.0      0.1       100        1.33         40.3%         68.3%
-#       1.0      0.1        10        4.00         14.3%         27.8%
+#     e_total   e/query   queries   median err   pins the individual (+/-1)
+#      10.0       0.1        33        2.21              25.0%
+#       1.0       0.1         3        7.00               8.0%
 #
-# e_total=10.0 appears in plenty of DP tutorials. It lets an attacker pin a
-# single individual's genotype in ~40% of attempts, which is not a privacy
-# guarantee in any useful sense.
-#
-# 1.0 is therefore the default: 10 queries at e=0.1, restrictive by design.
-# A genuinely private aggregate API answers few questions well rather than
-# many questions uselessly.
+# e_total=10.0 appears in plenty of DP tutorials. It lets an attacker state a
+# specific person's genotype in a quarter of attempts, which is not a privacy
+# guarantee in any useful sense. 1.0 is therefore the default: restrictive by
+# design, because a genuinely private aggregate API answers few questions well
+# rather than many questions uselessly.
 #
 # What 1.0 does NOT do, stated plainly: it does not defeat the differencing
-# attack. It reduces the attacker's per-attempt success rate from ~40% to
-# ~14%. Differential privacy bounds *expected* leakage; it does not eliminate
-# leakage, and an individual attempt can still get lucky. An earlier version of
-# this comment described 1.0 as "differencing defeated" -- that was wrong, and
-# the 400-trial measurement above is what corrected it.
+# attack. It reduces the attacker's per-attempt success rate from ~25% to ~8%.
+# Differential privacy bounds *expected* leakage; it does not eliminate it, and
+# an individual attempt can still get lucky.
+#
+# Two corrections are recorded here rather than quietly folded in. An earlier
+# version called 1.0 "differencing defeated" -- wrong, a nonzero success rate
+# is not defeat. And these figures previously read 40.3%/14.3%, measured while
+# the budget charged e once per federated query instead of once per site. That
+# undercounted privacy loss threefold. Fixing it also tightened the real
+# guarantee, which is why the corrected numbers are lower rather than higher.
 #
 # Operators holding genuinely identifiable data should lower this further and
-# tune against their own threat model rather than inheriting this value. The
-# interactive demo in demo/attack.html reproduces these numbers in-browser.
+# tune against their own threat model rather than inheriting this value.
 DEFAULT_TOTAL_EPSILON: Final[float] = 1.0
 
 # Rolling window over which the budget applies. Budget is not "reset" by an
