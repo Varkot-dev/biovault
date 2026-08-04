@@ -1,0 +1,923 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BioVault — Break the Privacy Layer</title>
+<style>
+  :root {
+    --void: #0B0E13;
+    --panel: #12161E;
+    --panel-2: #171C26;
+    --line: #232A36;
+    --readout: #E8EAED;
+    --neutral: #5A6472;
+    --neutral-dim: #3A424F;
+    --signal: #00E5A0;
+    --breach: #FF3B5C;
+    --amber: #FFB020;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --void: #F2F4F7;
+      --panel: #FFFFFF;
+      --panel-2: #F7F9FB;
+      --line: #DDE3EA;
+      --readout: #10141B;
+      --neutral: #5A6472;
+      --neutral-dim: #98A2B0;
+      --signal: #00875A;
+      --breach: #D6203F;
+      --amber: #9A6400;
+    }
+  }
+  :root[data-theme="light"] {
+    --void: #F2F4F7; --panel: #FFFFFF; --panel-2: #F7F9FB; --line: #DDE3EA;
+    --readout: #10141B; --neutral: #5A6472; --neutral-dim: #98A2B0;
+    --signal: #00875A; --breach: #D6203F; --amber: #9A6400;
+  }
+  :root[data-theme="dark"] {
+    --void: #0B0E13; --panel: #12161E; --panel-2: #171C26; --line: #232A36;
+    --readout: #E8EAED; --neutral: #5A6472; --neutral-dim: #3A424F;
+    --signal: #00E5A0; --breach: #FF3B5C; --amber: #FFB020;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--void);
+    color: var(--readout);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  /* ---- masthead ---- */
+  header { display: flex; flex-direction: column; gap: 18px; }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--neutral);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(30px, 5.5vw, 52px);
+    line-height: 1.04;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+    text-wrap: balance;
+  }
+  h1 em {
+    font-style: normal;
+    color: var(--signal);
+  }
+
+  .standfirst {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--neutral);
+    font-size: 15px;
+  }
+  .standfirst strong { color: var(--readout); font-weight: 600; }
+
+  /* ---- shared panel ---- */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--neutral);
+  }
+
+  /* ---- the target ---- */
+  .target {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--line);
+  }
+  .target > div {
+    background: var(--panel-2);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .target .lab { font-size: 11px; color: var(--neutral); letter-spacing: 0.1em; }
+  .target .val {
+    font-size: 22px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .target .hidden-val { color: var(--breach); }
+  .target .note { font-size: 11px; color: var(--neutral-dim); }
+
+  /* ---- controls ---- */
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 20px;
+    padding: 18px 16px;
+  }
+
+  .ctl { display: flex; flex-direction: column; gap: 8px; }
+  .ctl-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--neutral);
+  }
+  .ctl-val {
+    font-size: 15px;
+    color: var(--readout);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .ctl-hint { font-size: 11px; color: var(--neutral-dim); min-height: 2.6em; }
+  .ctl-hint.warn { color: var(--amber); }
+  .ctl-hint.bad { color: var(--breach); }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 2px;
+    background: var(--neutral-dim);
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px; height: 14px;
+    background: var(--signal);
+    border: 0;
+    cursor: pointer;
+    border-radius: 50%;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    background: var(--signal);
+    border: 0;
+    cursor: pointer;
+    border-radius: 50%;
+  }
+  input[type=range]:focus-visible { outline: 2px solid var(--signal); outline-offset: 6px; }
+
+  /* ---- buttons ---- */
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 0 16px 18px;
+  }
+  button {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    background: transparent;
+    color: var(--readout);
+    border: 1px solid var(--neutral-dim);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: border-color .12s, color .12s, background .12s;
+  }
+  button:hover:not(:disabled) { border-color: var(--signal); color: var(--signal); }
+  button:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+  button:disabled { opacity: .3; cursor: not-allowed; }
+  button.primary {
+    border-color: var(--signal);
+    color: var(--void);
+    background: var(--signal);
+    font-weight: 600;
+  }
+  button.primary:hover:not(:disabled) { opacity: .85; color: var(--void); }
+
+  /* ---- scope ---- */
+  .scope-wrap { padding: 16px; }
+  canvas { width: 100%; height: 300px; display: block; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    padding: 0 16px 14px;
+    font-size: 11px;
+    color: var(--neutral);
+  }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .swatch { width: 14px; height: 2px; display: inline-block; }
+
+  /* ---- readouts ---- */
+  .readouts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1px;
+    background: var(--line);
+  }
+  .readouts > div {
+    background: var(--panel-2);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .readouts .k {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--neutral);
+  }
+  .readouts .v {
+    font-size: 24px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .readouts .v.good { color: var(--signal); }
+  .readouts .v.bad { color: var(--breach); }
+  .readouts .v.warn { color: var(--amber); }
+
+  /* ---- budget gauge ---- */
+  .gauge {
+    height: 4px;
+    background: var(--neutral-dim);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .gauge-fill {
+    height: 100%;
+    background: var(--signal);
+    width: 100%;
+    transition: width .2s linear, background .2s;
+  }
+
+  /* ---- verdict ---- */
+  .verdict {
+    padding: 16px;
+    border-left: 3px solid var(--neutral-dim);
+    background: var(--panel-2);
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .verdict .headline {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .verdict.held { border-left-color: var(--signal); }
+  .verdict.held .headline { color: var(--signal); }
+  .verdict.breached { border-left-color: var(--breach); }
+  .verdict.breached .headline { color: var(--breach); }
+  .verdict.cut { border-left-color: var(--amber); }
+  .verdict.cut .headline { color: var(--amber); }
+  .verdict p { margin: 0; color: var(--neutral); }
+  .verdict code {
+    color: var(--readout);
+    background: var(--void);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+
+  /* ---- log ---- */
+  .log {
+    max-height: 168px;
+    overflow-y: auto;
+    padding: 10px 16px 14px;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+  }
+  .log div { color: var(--neutral); white-space: nowrap; }
+  .log .hit { color: var(--breach); }
+  .log .stop { color: var(--amber); }
+  .log b { color: var(--readout); font-weight: 600; }
+
+  /* ---- prose ---- */
+  .prose {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 68ch;
+  }
+  .prose h2 {
+    margin: 0;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--neutral);
+  }
+  .prose p { margin: 0; color: var(--neutral); font-size: 13px; }
+  .prose strong { color: var(--readout); font-weight: 600; }
+  .prose code {
+    color: var(--signal);
+    background: var(--panel);
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-size: 12px;
+  }
+
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  .table-scroll { overflow-x: auto; }
+  th, td {
+    text-align: right;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  th {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--neutral);
+    font-weight: 400;
+  }
+  tr.flag td { color: var(--breach); }
+  tr.pick td { color: var(--signal); }
+
+  footer {
+    font-size: 12px;
+    color: var(--neutral-dim);
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+  }
+  footer a { color: var(--neutral); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">BioVault · Differential privacy under attack</div>
+    <h1>Three hospitals. One query.<br><em>You are the attacker.</em></h1>
+    <p class="standfirst">
+      Lab&nbsp;A holds a cohort. You know it has <strong>500 patients</strong>, and you want to
+      learn whether <strong>one specific person</strong> carries a variant. You cannot read
+      records — only aggregate counts. This page runs the real attack against the real
+      mechanism, using the same constants as the Python implementation.
+    </p>
+  </header>
+
+  <!-- TARGET -->
+  <section class="panel">
+    <div class="panel-head"><span>Target cohort</span><span>synthetic</span></div>
+    <div class="target">
+      <div>
+        <span class="lab">Cohort size</span>
+        <span class="val">500</span>
+        <span class="note">known to you</span>
+      </div>
+      <div>
+        <span class="lab">Cohort minus target</span>
+        <span class="val">499</span>
+        <span class="note">you can filter to this</span>
+      </div>
+      <div>
+        <span class="lab">True difference</span>
+        <span class="val hidden-val">1</span>
+        <span class="note">the person's genotype</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTROLS -->
+  <section class="panel">
+    <div class="panel-head"><span>Attack parameters</span><span id="cfg-note">server-enforced</span></div>
+    <div class="controls">
+      <div class="ctl">
+        <div class="ctl-top">
+          <label for="eps">Epsilon per query</label>
+          <span class="ctl-val" id="eps-val">0.10</span>
+        </div>
+        <input type="range" id="eps" min="0.01" max="1.0" step="0.01" value="0.1">
+        <div class="ctl-hint" id="eps-hint"></div>
+      </div>
+
+      <div class="ctl">
+        <div class="ctl-top">
+          <label for="budget">Total epsilon budget</label>
+          <span class="ctl-val" id="budget-val">1.00</span>
+        </div>
+        <input type="range" id="budget" min="0.1" max="20" step="0.1" value="1.0">
+        <div class="ctl-hint" id="budget-hint"></div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="single">Run one query</button>
+      <button id="spam">Spam until cut off</button>
+      <button id="trials">Run 400 full attacks</button>
+      <button id="reset">Reset</button>
+      <button id="preset-tutorial">Preset: tutorial default (ε=10)</button>
+      <button id="preset-biovault">Preset: BioVault default</button>
+    </div>
+  </section>
+
+  <!-- SCOPE -->
+  <section class="panel">
+    <div class="panel-head"><span>Attacker's running estimate of the difference</span><span id="scope-status">idle</span></div>
+    <div class="scope-wrap"><canvas id="scope" aria-label="Attacker estimate converging on the true difference"></canvas></div>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--breach)"></i> true difference = 1</span>
+      <span><i class="swatch" style="background:var(--signal)"></i> your running estimate</span>
+      <span><i class="swatch" style="background:var(--neutral-dim)"></i> ±1 band — inside this, you have the person</span>
+    </div>
+  </section>
+
+  <!-- READOUTS -->
+  <section class="panel">
+    <div class="readouts">
+      <div>
+        <span class="k">Queries spent</span>
+        <span class="v" id="r-queries">0</span>
+        <div class="gauge"><div class="gauge-fill" id="gauge"></div></div>
+      </div>
+      <div><span class="k" id="k-est">Your estimate</span><span class="v" id="r-est">—</span></div>
+      <div><span class="k" id="k-err">Error vs truth</span><span class="v" id="r-err">—</span></div>
+      <div><span class="k">Noise scale</span><span class="v" id="r-noise">10.0</span></div>
+    </div>
+  </section>
+
+  <!-- VERDICT -->
+  <section class="verdict" id="verdict">
+    <span class="headline">Awaiting first query</span>
+    <p>Run a single query. One noisy answer tells you almost nothing — that is the mechanism working.</p>
+  </section>
+
+  <!-- LOG -->
+  <section class="panel">
+    <div class="panel-head"><span>Query log</span><span>newest first</span></div>
+    <div class="log" id="log"></div>
+  </section>
+
+  <!-- EXPLANATION -->
+  <section class="prose">
+    <h2>What you just did</h2>
+    <p>
+      This is the <strong>differencing attack</strong>. Ask for a count, ask again with your
+      target excluded, subtract. Against exact counts it discloses that person's genotype
+      precisely — no bug required, the API working as designed is enough.
+    </p>
+    <p>
+      Laplace noise blunts a single attempt. But noise is <strong>zero-mean</strong>: repeat the
+      query and average, and it cancels. That is why the enforced budget — not the noise — is
+      the actual control. A differential-privacy implementation with correct noise and
+      unenforced accounting provides no guarantee at all, only the appearance of one.
+    </p>
+
+    <h2>Why ε&nbsp;=&nbsp;1.0 and not 10.0</h2>
+    <p>
+      The default was chosen by measuring this attack rather than copying a convention.
+      Median residual error left to an attacker who exhausts the budget, recovering a true
+      count of 500:
+    </p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>ε total</th><th>ε / query</th><th>Queries</th><th>Median error</th><th>Verdict</th></tr>
+        </thead>
+        <tbody>
+          <tr class="flag"><td>10.0</td><td>0.1</td><td>100</td><td>1.15</td><td>recovers exact value</td></tr>
+          <tr class="flag"><td>2.0</td><td>0.1</td><td>20</td><td>1.62</td><td>within ±2</td></tr>
+          <tr class="pick"><td>1.0</td><td>0.1</td><td>10</td><td>2.85</td><td>differencing defeated</td></tr>
+          <tr class="pick"><td>1.0</td><td>0.05</td><td>20</td><td>5.15</td><td>differencing defeated</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      <code>ε_total = 10.0</code> appears in plenty of tutorials and leaves an attacker within
+      ~1.2 of the truth. Try the tutorial preset above and watch the estimate lock on.
+    </p>
+
+    <h2>Where this still fails</h2>
+    <p>
+      Even at the BioVault default, <strong>14.5% of measured trials still landed within ±1
+      of the true count</strong>. Differential privacy bounds <em>expected</em> leakage; it does
+      not eliminate it. Spam the attack a few times at ε&nbsp;=&nbsp;1.0 and you will win
+      some of them. That number is published rather than hidden because a privacy claim
+      you cannot falsify is not a claim.
+    </p>
+  </section>
+
+  <footer>
+    Noise here is Laplace(0, 1/ε) drawn from <code>crypto.getRandomValues</code>, matching
+    <code>secrets</code> in the Python implementation — a predictable PRNG would let an attacker
+    subtract the noise while every statistical test still passed. Constants
+    (<code>MIN_COHORT_SIZE=5</code>, <code>ε∈[0.01,1.0]</code>, sensitivity&nbsp;1) are the
+    server's. Cohort data is synthetic.
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var TRUE_A = 500, TRUE_B = 499, TRUE_DIFF = 1;
+
+  var state = { eps: 0.1, budget: 1.0, spent: 0, samples: [], running: false, timer: null };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // Cryptographic uniform in (0,1) — mirrors secrets.randbits(53) in privacy.py.
+  function cryptoUniform() {
+    var buf = new Uint32Array(2);
+    crypto.getRandomValues(buf);
+    var hi = buf[0] >>> 5, lo = buf[1] >>> 6;
+    return (hi * 67108864 + lo + 0.5) / 9007199254740992;
+  }
+
+  // Inverse-CDF Laplace(0, scale). Same derivation as _laplace_noise().
+  function laplace(scale) {
+    var c = cryptoUniform() - 0.5;
+    return -scale * Math.sign(c) * Math.log1p(-2 * Math.abs(c));
+  }
+
+  function noisy(trueCount, eps) {
+    return Math.max(0, Math.round(trueCount + laplace(1 / eps)));
+  }
+
+  function maxQueries() { return Math.floor(state.budget / state.eps + 1e-9); }
+
+  function mean(a) {
+    if (!a.length) return null;
+    var s = 0; for (var i = 0; i < a.length; i++) s += a[i];
+    return s / a.length;
+  }
+
+  // ---------- canvas ----------
+  var cv = $("scope"), ctx = cv.getContext("2d");
+
+  function css(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function sizeCanvas() {
+    var dpr = window.devicePixelRatio || 1;
+    var r = cv.getBoundingClientRect();
+    cv.width = Math.max(1, Math.floor(r.width * dpr));
+    cv.height = Math.max(1, Math.floor(300 * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function draw() {
+    var w = cv.clientWidth, h = 300;
+    ctx.clearRect(0, 0, w, h);
+
+    var pad = { l: 46, r: 12, t: 14, b: 24 };
+    var pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+
+    // Y range adapts but always shows the ±1 band around the truth.
+    var vals = state.samples.slice();
+    var lo = -8, hi = 10;
+    if (vals.length) {
+      var run = [], acc = 0;
+      for (var i = 0; i < vals.length; i++) { acc += vals[i]; run.push(acc / (i + 1)); }
+      lo = Math.min(lo, Math.min.apply(null, run) - 2);
+      hi = Math.max(hi, Math.max.apply(null, run) + 2);
+    }
+    function y(v) { return pad.t + ph - ((v - lo) / (hi - lo)) * ph; }
+    function x(i, n) { return pad.l + (n <= 1 ? pw / 2 : (i / (n - 1)) * pw); }
+
+    // grid
+    ctx.strokeStyle = css("--line"); ctx.lineWidth = 1;
+    ctx.fillStyle = css("--neutral"); ctx.font = "10px " + css("--mono");
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    for (var g = 0; g <= 4; g++) {
+      var vv = lo + (hi - lo) * (g / 4), yy = y(vv);
+      ctx.beginPath(); ctx.moveTo(pad.l, yy); ctx.lineTo(w - pad.r, yy); ctx.stroke();
+      ctx.fillText(vv.toFixed(0), pad.l - 8, yy);
+    }
+
+    // ±1 band — "you have the person"
+    ctx.fillStyle = css("--neutral-dim");
+    ctx.globalAlpha = 0.22;
+    ctx.fillRect(pad.l, y(TRUE_DIFF + 1), pw, y(TRUE_DIFF - 1) - y(TRUE_DIFF + 1));
+    ctx.globalAlpha = 1;
+
+    // truth line
+    ctx.strokeStyle = css("--breach"); ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(pad.l, y(TRUE_DIFF)); ctx.lineTo(w - pad.r, y(TRUE_DIFF)); ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (!vals.length) {
+      ctx.fillStyle = css("--neutral-dim");
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = "12px " + css("--mono");
+      ctx.fillText("run a query", pad.l + pw / 2, pad.t + ph / 2);
+      return;
+    }
+
+    // per-query raw differences (faint)
+    ctx.fillStyle = css("--neutral-dim");
+    for (var j = 0; j < vals.length; j++) {
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath(); ctx.arc(x(j, vals.length), y(vals[j]), 1.6, 0, 6.284); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // running estimate
+    var acc2 = 0;
+    ctx.strokeStyle = css("--signal"); ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (var k = 0; k < vals.length; k++) {
+      acc2 += vals[k];
+      var px = x(k, vals.length), py = y(acc2 / (k + 1));
+      if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // endpoint emphasis
+    var est = acc2 / vals.length;
+    ctx.fillStyle = Math.abs(est - TRUE_DIFF) <= 1 ? css("--breach") : css("--signal");
+    ctx.beginPath();
+    ctx.arc(x(vals.length - 1, vals.length), y(est), 4, 0, 6.284);
+    ctx.fill();
+  }
+
+  // ---------- render ----------
+  function log(msg, cls) {
+    var d = document.createElement("div");
+    if (cls) d.className = cls;
+    d.innerHTML = msg;
+    $("log").appendChild(d);
+    while ($("log").children.length > 120) $("log").removeChild($("log").firstChild);
+  }
+
+  function setVerdict(kind, headline, body) {
+    var v = $("verdict");
+    v.className = "verdict " + kind;
+    v.innerHTML = '<span class="headline">' + headline + "</span><p>" + body + "</p>";
+  }
+
+  function render() {
+    var n = state.samples.length, mx = maxQueries();
+    var est = mean(state.samples);
+    var err = est === null ? null : Math.abs(est - TRUE_DIFF);
+
+    $("k-est").textContent = "Your estimate";
+    $("k-err").textContent = "Error vs truth";
+    $("r-queries").textContent = n + " / " + mx;
+    $("r-est").textContent = est === null ? "—" : est.toFixed(2);
+    $("r-noise").textContent = (1 / state.eps).toFixed(1);
+
+    var errEl = $("r-err");
+    if (err === null) { errEl.textContent = "—"; errEl.className = "v"; }
+    else {
+      errEl.textContent = err.toFixed(2);
+      errEl.className = "v " + (err <= 1 ? "bad" : err <= 3 ? "warn" : "good");
+    }
+
+    var frac = mx ? Math.max(0, 1 - n / mx) : 0;
+    var g = $("gauge");
+    g.style.width = (frac * 100) + "%";
+    g.style.background = frac > 0.5 ? css("--signal") : frac > 0 ? css("--amber") : css("--breach");
+
+    $("scope-status").textContent = state.running ? "querying…" : n >= mx && mx > 0 ? "budget exhausted" : n ? "idle" : "idle";
+    $("single").disabled = n >= mx;
+    $("spam").disabled = n >= mx || state.running;
+
+    draw();
+  }
+
+  function judge(final) {
+    var est = mean(state.samples);
+    if (est === null) return;
+    var err = Math.abs(est - TRUE_DIFF), n = state.samples.length, mx = maxQueries();
+
+    if (final && err <= 1) {
+      setVerdict("breached", "BREACH — you have the individual",
+        "Your estimate is <code>" + est.toFixed(2) + "</code> against a true difference of " +
+        "<code>1</code>. After <code>" + n + "</code> quer" + (n === 1 ? "y" : "ies") +
+        " you can state that person's genotype. At ε_total=<code>" + state.budget.toFixed(1) +
+        "</code> this happens in roughly <b>" + (state.budget >= 10 ? "40%" : state.budget >= 2 ? "25%" : "14%") +
+        "</b> of attempts — hit Reset and run it again.");
+    } else if (final && err <= 2) {
+      setVerdict("cut", "Near miss — off by " + err.toFixed(2),
+        "Estimate <code>" + est.toFixed(2) + "</code> against a truth of <code>1</code>. Close enough " +
+        "to narrow the individual down, not close enough to state their genotype. Budget is spent; " +
+        "the ledger is append-only, so you cannot buy more.");
+    } else if (final && n >= mx) {
+      setVerdict("cut", "Budget exhausted — attack cut off",
+        "Your estimate is <code>" + est.toFixed(2) + "</code>, off by <code>" + err.toFixed(2) +
+        "</code>. You needed to resolve a difference of 1 and cannot. Further queries are refused: " +
+        "the ledger is append-only, so you cannot buy more budget.");
+    } else if (n === 1) {
+      setVerdict("held", "One query tells you nothing",
+        "A single noisy difference of <code>" + state.samples[0] + "</code> against a truth of " +
+        "<code>1</code>. Noise scale is <code>" + (1 / state.eps).toFixed(1) +
+        "</code>. Now spam it — that is where naive implementations fall over.");
+    } else {
+      setVerdict("held", "Holding — " + (mx - n) + " quer" + (mx - n === 1 ? "y" : "ies") + " left",
+        "Estimate <code>" + est.toFixed(2) + "</code>, off by <code>" + err.toFixed(2) +
+        "</code>. The average is converging, but the budget drains faster than the noise cancels.");
+    }
+  }
+
+  function runQuery() {
+    if (state.samples.length >= maxQueries()) {
+      log("<b>REFUSED</b> — privacy budget exhausted", "stop");
+      judge(true);
+      render();
+      return false;
+    }
+    var a = noisy(TRUE_A, state.eps), b = noisy(TRUE_B, state.eps);
+    var d = a - b;
+    state.samples.push(d);
+    var est = mean(state.samples), err = Math.abs(est - TRUE_DIFF);
+    log("q" + String(state.samples.length).padStart(3, "0") +
+        "  A=<b>" + a + "</b>  B=<b>" + b + "</b>  diff=<b>" + (d >= 0 ? "+" : "") + d +
+        "</b>  est=<b>" + est.toFixed(2) + "</b>  err=" + err.toFixed(2),
+        err <= 1 ? "hit" : null);
+    return true;
+  }
+
+  // ---------- events ----------
+  $("single").addEventListener("click", function () {
+    runQuery(); judge(state.samples.length >= maxQueries()); render();
+  });
+
+  $("spam").addEventListener("click", function () {
+    if (state.running) return;
+    state.running = true; render();
+    state.timer = setInterval(function () {
+      var ok = runQuery();
+      render();
+      if (!ok || state.samples.length >= maxQueries()) {
+        clearInterval(state.timer);
+        state.running = false;
+        judge(true);
+        render();
+      }
+    }, 55);
+  });
+
+  // A single attack is one draw from a distribution. An attacker only needs to
+  // succeed once, so the honest summary of a probabilistic guarantee is a
+  // success RATE, not a median. This runs the whole attack 400 times.
+  $("trials").addEventListener("click", function () {
+    clearInterval(state.timer); state.running = false;
+    var n = maxQueries(), TRIALS = 400, w1 = 0, w2 = 0, errs = [];
+    for (var t = 0; t < TRIALS; t++) {
+      var acc = 0;
+      for (var i = 0; i < n; i++) acc += noisy(TRUE_A, state.eps) - noisy(TRUE_B, state.eps);
+      var e = Math.abs(acc / n - TRUE_DIFF);
+      errs.push(e);
+      if (e <= 1) w1++;
+      if (e <= 2) w2++;
+    }
+    errs.sort(function (a, b) { return a - b; });
+    var med = errs[Math.floor(TRIALS / 2)];
+    var r1 = (100 * w1 / TRIALS), r2 = (100 * w2 / TRIALS);
+
+    $("r-est").textContent = r1.toFixed(1) + "%";
+    $("r-est").className = "v " + (r1 > 25 ? "bad" : r1 > 10 ? "warn" : "good");
+    $("r-err").textContent = med.toFixed(2);
+    $("r-err").className = "v " + (med <= 1 ? "bad" : med <= 3 ? "warn" : "good");
+    $("r-queries").textContent = TRIALS + " runs";
+    $("k-est").textContent = "Attack success rate";
+    $("k-err").textContent = "Median error";
+
+    log("<b>" + TRIALS + " full attacks</b> at ε/q=" + state.eps.toFixed(2) +
+        ", ε_total=" + state.budget.toFixed(1) + " (" + n + " queries each) — " +
+        "within ±1: <b>" + r1.toFixed(1) + "%</b>, within ±2: <b>" + r2.toFixed(1) +
+        "%</b>, median error <b>" + med.toFixed(2) + "</b>",
+        r1 > 25 ? "hit" : "stop");
+
+    setVerdict(r1 > 25 ? "breached" : r1 > 10 ? "cut" : "held",
+      "Attacker succeeds in " + r1.toFixed(1) + "% of attempts",
+      "Across <code>" + TRIALS + "</code> independent attacks at ε_total=<code>" +
+      state.budget.toFixed(1) + "</code>, the attacker landed within ±1 of the true " +
+      "difference <b>" + r1.toFixed(1) + "%</b> of the time (within ±2: " + r2.toFixed(1) + "%). " +
+      "This is what a probabilistic guarantee looks like — differential privacy bounds " +
+      "expected leakage, it does not eliminate it. Compare the two presets.");
+  });
+
+  $("reset").addEventListener("click", function () {
+    clearInterval(state.timer);
+    state.running = false;
+    state.samples = [];
+    $("log").innerHTML = "";
+    setVerdict("", "Awaiting first query",
+      "Run a single query. One noisy answer tells you almost nothing — that is the mechanism working.");
+    render();
+  });
+
+  $("preset-tutorial").addEventListener("click", function () {
+    setParams(0.1, 10.0);
+    log("preset: ε/query=0.10, ε_total=10.0 — the value most tutorials ship", "stop");
+  });
+  $("preset-biovault").addEventListener("click", function () {
+    setParams(0.1, 1.0);
+    log("preset: ε/query=0.10, ε_total=1.0 — BioVault default", "stop");
+  });
+
+  function setParams(eps, budget) {
+    clearInterval(state.timer); state.running = false;
+    state.eps = eps; state.budget = budget; state.samples = [];
+    $("eps").value = String(eps); $("budget").value = String(budget);
+    $("log").innerHTML = "";
+    syncLabels();
+    setVerdict("", "Parameters changed",
+      "Budget now permits <code>" + maxQueries() + "</code> quer" +
+      (maxQueries() === 1 ? "y" : "ies") + ". Spam it and see whether the mechanism holds.");
+    render();
+  }
+
+  function syncLabels() {
+    $("eps-val").textContent = state.eps.toFixed(2);
+    $("budget-val").textContent = state.budget.toFixed(2);
+
+    var eh = $("eps-hint");
+    if (state.eps >= 0.8) {
+      eh.textContent = "Noise scale " + (1 / state.eps).toFixed(1) + ". Barely any protection per answer.";
+      eh.className = "ctl-hint bad";
+    } else if (state.eps >= 0.4) {
+      eh.textContent = "Noise scale " + (1 / state.eps).toFixed(1) + ". Thin margin on a difference of 1.";
+      eh.className = "ctl-hint warn";
+    } else {
+      eh.textContent = "Noise scale " + (1 / state.eps).toFixed(1) + ". Server caps ε at 1.0 per query.";
+      eh.className = "ctl-hint";
+    }
+
+    var bh = $("budget-hint"), mx = maxQueries();
+    if (state.budget > 2) {
+      bh.textContent = "Permits " + mx + " queries — enough to average the noise away.";
+      bh.className = "ctl-hint bad";
+    } else if (state.budget > 1) {
+      bh.textContent = "Permits " + mx + " queries. Marginal.";
+      bh.className = "ctl-hint warn";
+    } else {
+      bh.textContent = "Permits " + mx + " quer" + (mx === 1 ? "y" : "ies") + ". BioVault default is 1.0.";
+      bh.className = "ctl-hint";
+    }
+  }
+
+  $("eps").addEventListener("input", function (e) {
+    state.eps = parseFloat(e.target.value);
+    state.samples = []; $("log").innerHTML = "";
+    syncLabels(); render();
+  });
+  $("budget").addEventListener("input", function (e) {
+    state.budget = parseFloat(e.target.value);
+    state.samples = []; $("log").innerHTML = "";
+    syncLabels(); render();
+  });
+
+  window.addEventListener("resize", sizeCanvas);
+  var mq = window.matchMedia("(prefers-color-scheme: dark)");
+  if (mq.addEventListener) mq.addEventListener("change", draw);
+
+  syncLabels();
+  sizeCanvas();
+  render();
+})();
+</script>

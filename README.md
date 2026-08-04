@@ -1,10 +1,110 @@
 # BioVault
 
-Role-based access control for multi-institution genomics datasets.
+### Query three hospitals' genomes. See none of them.
 
-Three isolated research labs, AES-256-GCM encryption at rest, OAuth 2.0 with
-PKCE, JWT authentication with refresh-token rotation, and PostgreSQL row-level
-security as a second, independent isolation layer.
+Three research labs. One aggregate answer. No lab ever sees another's records.
+
+**→ [Break it yourself](https://claude.ai/code/artifact/338d9894-9820-46f7-8833-b14c85b04555)** — an
+interactive demo where *you* are the attacker. Run a real differencing attack
+against the real mechanism, watch the privacy budget cut you off mid-attack,
+and see exactly where the defense fails.
+
+```bash
+git clone https://github.com/Varkot-dev/biovault && cd biovault
+cp .env.example .env    # then fill in two generated secrets
+docker compose up
+```
+
+---
+
+Multi-institution genomics has a standing problem. The scientifically valuable
+question — *"how many patients across all our labs carry this variant?"* — is
+usually unanswerable, because answering it means one lab shipping raw genomes
+to another, which consent agreements and GDPR forbid. So the query never gets
+asked.
+
+BioVault answers it without moving a single record. Each lab counts inside its
+own isolation boundary; only differentially private noised integers cross
+between institutions.
+
+Strict tenant isolation and cross-institution collaboration normally trade off
+against each other. Here both hold at once — and most of the test suite exists
+to prove the second did not quietly undermine the first.
+
+Underneath: role-based access control across three isolated tenants,
+AES-256-GCM encryption at rest with envelope key management, OAuth 2.0 with
+PKCE, JWT with refresh-token rotation and reuse detection, and PostgreSQL
+row-level security as a second, independent isolation layer.
+
+## Private federated queries
+
+```bash
+curl -X POST localhost:8000/federation/cohort-count \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"variant_prefix": "SPEC", "epsilon": 0.1}'
+```
+
+```json
+{
+  "total": 10,
+  "sites_queried": 3,
+  "sites_contributing": 2,
+  "epsilon_spent": 0.1,
+  "epsilon_remaining": 0.9,
+  "contributions": [
+    {"tenant_id": "lab-broad",  "suppressed": false},
+    {"tenant_id": "lab-riken",  "suppressed": false},
+    {"tenant_id": "lab-sanger", "suppressed": true}
+  ]
+}
+```
+
+Sanger is suppressed automatically: its matching cohort was at or below the
+minimum size, where noise cannot hide the difference between *nobody* and
+*somebody*. No record, identifier, or exact per-site count appears anywhere in
+that response — asserted by
+`test_response_contains_no_record_level_data`, which scans the raw body for
+known specimen labels, dataset ids, and payload content.
+
+### Why the budget matters more than the noise
+
+Noise is zero-mean, so a determined querier can repeat a question and average
+the noise away. Measured on this implementation:
+
+| Queries | Attacker's estimate of a true count of 500 | Error |
+|---:|---:|---:|
+| 10 | 503.10 | 3.10 |
+| 100 | 500.98 | 0.98 |
+| 2,000 | 499.86 | **0.14** |
+
+Unlimited queries defeat differential privacy entirely, however correct the
+noise. The enforced per-tenant epsilon budget is therefore the actual control,
+and its default was chosen by **measuring this attack rather than copying a
+convention**.
+
+The right metric is an **attacker success rate**, not a median error — a median
+says what happens on a typical attempt, but an attacker only needs to succeed
+once. Over 400 full attacks each:
+
+| ε_total | queries allowed | attacker pins the individual (±1) | within ±2 |
+|---:|---:|---:|---:|
+| 10.0 — *the tutorial default* | 100 | **40.3%** | 68.3% |
+| **1.0 — BioVault default** | 10 | **14.3%** | 27.8% |
+
+ε_total = 10.0 appears in plenty of DP tutorials. It lets an attacker state a
+specific person's genotype in roughly **two attempts out of five** — not a
+privacy guarantee in any useful sense.
+
+**What 1.0 does not do:** it does not defeat the differencing attack. It cuts
+the attacker's per-attempt success rate from ~40% to ~14%. Differential privacy
+bounds *expected* leakage; it does not eliminate it. An earlier version of this
+project's own docs claimed "differencing defeated" at ε=1.0 — that was wrong,
+and the 400-trial measurement is what corrected it.
+
+Run the numbers yourself in the
+[demo](https://claude.ai/code/artifact/338d9894-9820-46f7-8833-b14c85b04555)
+(*Run 400 full attacks*), or read the reasoning in
+[`budget.py`](src/biovault/federation/budget.py).
 
 **Every claim below is backed by a command in this repository that you can
 re-run.** Numbers were measured, not estimated. Where something is incomplete,
@@ -16,27 +116,29 @@ Last run against a freshly wiped database (`docker compose down -v`, rebuild,
 re-bootstrap):
 
 ```
-268 passed          87.95% coverage (floor: 80%)
+383 passed          ruff clean          pip-audit: 72 packages, 0 vulnerabilities
 ```
 
 | Suite | Tests |
 |---|---:|
-| Authorization policy (`test_policy.py`) | 74 |
+| Authorization policy | 79 |
 | API access control — IDOR, SQLi, roles, PHI | 46 |
+| Differential privacy — noise, suppression, differencing | 34 |
 | JWT attacks — `alg:none`, tamper, expiry, escalation | 28 |
 | RLS tenant isolation, via raw SQL | 27 |
 | Envelope encryption | 24 |
+| OAuth 2.0 authorization-code flow | 23 |
 | PKCE | 22 |
+| Federated cohort discovery over HTTP | 22 |
+| Privacy budget enforcement | 15 |
 | Audit log completeness and immutability | 15 |
 | Refresh rotation and reuse detection | 13 |
-| Bootstrap and RLS installation | 6 |
+| Pre-auth identity-lookup blast radius | 10 |
+| Bootstrap and RLS installation | 7 |
 | Master-key rotation | 6 |
 | Policy centralization (AST guard) | 5 |
 | Suite-integrity guards | 2 |
-| **Total** | **268** |
-
-170 tests carry the `security` marker. `pip-audit`: 72 packages, no known
-vulnerabilities.
+| **Total** | **383** |
 
 Coverage is 100% on `authz/policy.py`'s decision paths (97% file),
 `db/rls.py`, `audit/recorder.py`, `auth/refresh.py`, and `auth/pkce.py` — the
@@ -80,6 +182,10 @@ a running PostgreSQL — `docker compose up -d db` first.
 | IDOR and SQL injection blocked over HTTP | `pytest tests/security/test_api_access_control.py` |
 | Audit log completeness and immutability | `pytest tests/security/test_audit_log.py` |
 | Master-key rotation without re-encrypting data | `pytest tests/integration/test_key_rotation.py` |
+| Differential privacy and the differencing attack | `pytest tests/security/test_differential_privacy.py` |
+| Privacy budget stops the averaging attack | `pytest tests/security/test_privacy_budget.py` |
+| Federation leaks no record-level data | `pytest tests/security/test_federation_api.py` |
+| OAuth 2.0 + PKCE end to end | `pytest tests/security/test_oauth_flow.py` |
 | Full suite | `pytest tests/ -q` |
 | Coverage | `pytest tests/ --cov --cov-report=term` |
 

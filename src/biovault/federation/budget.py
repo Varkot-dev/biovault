@@ -46,29 +46,33 @@ from biovault.models.tables import PrivacyBudgetEntry
 # simplifies to 1 / (e_query * sqrt(n)). Measured median error in recovering a
 # true count of 500:
 #
-#     total   e/query   queries   median error   verdict
-#      10.0      0.1       100         1.15      recovers the exact value
-#       2.0      0.1        20         1.62      still within +/-2
-#       1.0      0.1        10         3.30      differencing defeated
-#       1.0     0.05        20         5.15      differencing defeated
+# The right way to read this is as an ATTACKER SUCCESS RATE, not a median.
+# A median error says what happens on a typical attempt; an attacker only needs
+# to succeed once. Measured over 400 trials each, recovering a true count of
+# 500 by exhausting the budget and averaging:
 #
-# A differencing attack needs to resolve a difference of 1, so any
-# configuration leaving residual error below ~3 is not protective. e_total=10.0
-# appears in plenty of DP tutorials and is one of them -- it lets an attacker
-# recover the count to within ~1.2, which is effectively exact.
+#     total   e/query   queries   median err   within +/-1   within +/-2
+#      10.0      0.1       100        1.33         40.3%         68.3%
+#       1.0      0.1        10        4.00         14.3%         27.8%
 #
-# 1.0 is therefore the default. It permits 10 queries at e=0.1, which is
-# restrictive by design: a genuinely private aggregate API answers few
-# questions well rather than many questions uselessly.
+# e_total=10.0 appears in plenty of DP tutorials. It lets an attacker pin a
+# single individual's genotype in ~40% of attempts, which is not a privacy
+# guarantee in any useful sense.
 #
-# Residual risk, stated honestly. At e_total=1.0 the attacker's median error
-# after exhausting the budget is 2.85, but across 200 measured trials 14.5%
-# still landed within +/-1 of the truth. Differential privacy is a
-# probabilistic guarantee, not an absolute one: it bounds *expected* leakage,
-# and an individual attempt can still get lucky. Lowering e_total further
-# shrinks that fraction at the cost of answering fewer questions. Operators
-# holding genuinely identifiable data should tune this against their own
-# threat model rather than inheriting this value.
+# 1.0 is therefore the default: 10 queries at e=0.1, restrictive by design.
+# A genuinely private aggregate API answers few questions well rather than
+# many questions uselessly.
+#
+# What 1.0 does NOT do, stated plainly: it does not defeat the differencing
+# attack. It reduces the attacker's per-attempt success rate from ~40% to
+# ~14%. Differential privacy bounds *expected* leakage; it does not eliminate
+# leakage, and an individual attempt can still get lucky. An earlier version of
+# this comment described 1.0 as "differencing defeated" -- that was wrong, and
+# the 400-trial measurement above is what corrected it.
+#
+# Operators holding genuinely identifiable data should lower this further and
+# tune against their own threat model rather than inheriting this value. The
+# interactive demo in demo/attack.html reproduces these numbers in-browser.
 DEFAULT_TOTAL_EPSILON: Final[float] = 1.0
 
 # Rolling window over which the budget applies. Budget is not "reset" by an
