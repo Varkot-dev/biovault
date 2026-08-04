@@ -128,9 +128,18 @@ def test_response_reports_which_sites_contributed(client, live_settings) -> None
     tenants = {c["tenant_id"] for c in body["contributions"]}
     assert tenants == {BROAD, SANGER, "lab-riken"}
     for contribution in body["contributions"]:
-        assert set(contribution) == {"tenant_id", "suppressed"}, (
+        # Exactly these two fields. Pinning the set is the point: a per-site
+        # count or noise scale added here would leak what the aggregate exists
+        # to hide, and would pass any assertion that only checked the fields it
+        # knew about.
+        assert set(contribution) == {"tenant_id", "status"}, (
             "a per-site count leaked into the response"
         )
+        # `status` distinguishes a DP release (`suppressed`) from an
+        # administrative skip (`unavailable`). Collapsing them into one boolean
+        # put an unprotected signal on a channel whose privacy analysis covered
+        # only the protected one.
+        assert contribution["status"] in {"contributed", "suppressed", "unavailable"}
 
 
 def test_repeated_identical_queries_return_different_answers(

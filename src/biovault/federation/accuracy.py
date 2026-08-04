@@ -38,7 +38,11 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict
 
-from biovault.federation.privacy import COUNT_SENSITIVITY, PrivacyError
+from biovault.federation.privacy import (
+    COUNT_SENSITIVITY,
+    THRESHOLD_EPSILON_FRACTION,
+    PrivacyError,
+)
 
 # Default significance level. 0.05 gives a 95% interval, the convention in the
 # biomedical literature this output is meant to be read alongside.
@@ -111,16 +115,42 @@ def scale_to_tolerance(scale: float, alpha: float = DEFAULT_ALPHA) -> float:
     return -scale * math.log(alpha)
 
 
+def count_noise_scale(epsilon: float) -> float:
+    """The Laplace scale a count actually receives for a given query epsilon.
+
+    **Not** `sensitivity / epsilon`. The count does not get the whole budget:
+    the suppression decision is a differentially private release in its own
+    right and is paid for out of the same epsilon, so the count sees only
+    `1 - THRESHOLD_EPSILON_FRACTION` of it.
+
+    This function exists so there is exactly one place that knows that. It was
+    previously computed independently here and in `privatize_count`, and the
+    two diverged the moment the split was introduced: `/federation/precision`
+    told analysts to expect +/-51.89 while real queries returned +/-103.78, a
+    silent 2x understatement on the one endpoint whose entire purpose is
+    honest planning. An analyst sizing a study against the advertised 95%
+    interval was getting roughly 75% real coverage.
+
+    Anything that needs to know how noisy a count will be must call this
+    rather than dividing by epsilon.
+    """
+    if epsilon <= 0 or not math.isfinite(epsilon):
+        raise PrivacyError("epsilon must be positive and finite")
+    count_share = 1.0 - THRESHOLD_EPSILON_FRACTION
+    return COUNT_SENSITIVITY / (epsilon * count_share)
+
+
 def epsilon_to_tolerance(epsilon: float, alpha: float = DEFAULT_ALPHA) -> float:
     """Half-width implied by an epsilon, for a counting query.
 
     Lets an analyst ask "how precise will the answer be?" *before* spending any
     budget — which is the difference between planning a study and discovering
     mid-study that the answer is unusable.
+
+    Derived from `count_noise_scale`, so a change to the epsilon split moves
+    this figure with it instead of leaving the planner quoting a stale one.
     """
-    if epsilon <= 0 or not math.isfinite(epsilon):
-        raise PrivacyError("epsilon must be positive and finite")
-    return scale_to_tolerance(COUNT_SENSITIVITY / epsilon, alpha)
+    return scale_to_tolerance(count_noise_scale(epsilon), alpha)
 
 
 def interval_for(

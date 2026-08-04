@@ -29,6 +29,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
+from enum import StrEnum
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -48,6 +49,7 @@ from biovault.federation.budget import DEFAULT_TOTAL_EPSILON, charge, remaining_
 from biovault.federation.consent import (
     InboundBudgetExhausted,
     SiteNotParticipating,
+    assert_extractable,
     participating_sites,
     record_extraction,
 )
@@ -114,18 +116,47 @@ class CohortQuery(BaseModel):
         return hashlib.sha256(f"gene={self.gene}".encode()).hexdigest()
 
 
-class SiteContribution(BaseModel):
-    """One site's privatized contribution.
+class SiteStatus(StrEnum):
+    """Why a site did or did not contribute to a federated total.
 
-    `tenant_id` is included so an analyst knows which sites participated. The
-    *count* is noised and, for small cohorts, suppressed — so participation is
-    disclosed while the underlying data is not.
+    Three distinct outcomes that must not share one flag. `SUPPRESSED` is a
+    differentially private release — the site was read and its noised count
+    fell below the threshold. `UNAVAILABLE` is administrative: nothing was
+    read, no noise was drawn, no epsilon is owed.
+
+    Collapsing them (as an earlier version did) puts an unprotected
+    administrative signal on a channel whose privacy analysis covers only the
+    protected one — and does not even hide it, since the two separate on
+    whether the inbound ledger moved.
+    """
+
+    CONTRIBUTED = "contributed"
+    SUPPRESSED = "suppressed"
+    UNAVAILABLE = "unavailable"
+
+
+class SiteContribution(BaseModel):
+    """One site's outcome in a federated query.
+
+    `tenant_id` is included so an analyst knows which sites participated —
+    participation is disclosed while the underlying data is not.
     """
 
     model_config = ConfigDict(frozen=True)
 
     tenant_id: str
-    suppressed: bool
+    status: SiteStatus
+
+    @property
+    def suppressed(self) -> bool:
+        """Backwards-compatible view: did this site withhold a count?
+
+        True for both `SUPPRESSED` and `UNAVAILABLE`. Retained so existing
+        callers keep working, but new code should read `status` — the two
+        cases have different privacy meanings and this property erases the
+        distinction.
+        """
+        return self.status is not SiteStatus.CONTRIBUTED
 
 
 class FederatedCohortResult(BaseModel):
@@ -246,6 +277,39 @@ def run_federated_cohort_query(
         if not sites:
             raise PrivacyError("no sites are participating in federated queries")
 
+        # Filter to the sites that can actually absorb this query BEFORE
+        # charging, using the read-only precheck in `consent`.
+        #
+        # Without it, the querier is charged for every participating site and
+        # then some of them refuse mid-loop. Those refusals are correct -- one
+        # exhausted lab must not be able to deny the whole consortium -- but
+        # charging for a site that never ran is accounting for work that did
+        # not happen. Worse, if enough sites refuse, `combine_federated_counts`
+        # suppresses the total at `min_contributing_sites` and the epsilon
+        # already taken from the sites that DID run bought nothing.
+        #
+        # The precheck is a filter rather than a gate: the query proceeds with
+        # whatever subset can serve it, and the outbound charge is sized to
+        # that subset, so a caller pays for the labs that actually answered.
+        #
+        # This does not make the per-site charge redundant. Between this check
+        # and that charge another querier may consume the remaining ceiling, so
+        # `record_extraction` still enforces it under a lock. The precheck
+        # narrows the window; it does not close it, and the mid-loop handler
+        # below remains the authority.
+        servable: list[str] = []
+        for site in sites:
+            try:
+                assert_extractable(session, tenant_id=site, epsilon=query.epsilon)
+            except (InboundBudgetExhausted, SiteNotParticipating):
+                continue
+            servable.append(site)
+
+        if not servable:
+            raise PrivacyError(
+                "no participating site can absorb this query's privacy cost"
+            )
+
         # One query produces one Laplace release PER SITE, and the requester
         # observes all of them. Under sequential composition the privacy cost
         # is therefore epsilon * len(sites), not epsilon.
@@ -266,7 +330,8 @@ def run_federated_cohort_query(
         # without linking identities across tenants, which the whole system
         # exists to prevent. Sequential composition is the safe reading when
         # overlap cannot be ruled out.
-        total_cost = query.epsilon * len(sites)
+        # Sized to the sites that will actually run, not to every participant.
+        total_cost = query.epsilon * len(servable)
 
         # Charge first, ON ITS OWN COMMITTED TRANSACTION. Raises
         # BudgetExhausted before anything is read.
@@ -296,7 +361,15 @@ def run_federated_cohort_query(
         per_site: list[NoisyCount] = []
         contributions: list[SiteContribution] = []
 
+        # Sites filtered out by the precheck are reported but never charged
+        # and never read: nothing was disclosed, so nothing is owed.
         for site in sites:
+            if site not in servable:
+                contributions.append(
+                    SiteContribution(tenant_id=site, status=SiteStatus.UNAVAILABLE)
+                )
+
+        for site in servable:
             # Charge the source lab's extraction ceiling before reading it, on
             # its own committed transaction for the same reason as the outbound
             # charge above: the read is what discloses, so the debit must
@@ -322,20 +395,33 @@ def run_federated_cohort_query(
             except (InboundBudgetExhausted, SiteNotParticipating):
                 # A site that cannot or will not answer is skipped, not fatal.
                 # Failing the whole query would let one exhausted lab deny the
-                # consortium, and would also disclose that lab's ledger state
-                # to every querier through the error. It contributes nothing
-                # and is reported as suppressed, which is already an expected
-                # per-site outcome and therefore reveals nothing new.
+                # consortium, and would disclose that lab's ledger state to
+                # every querier through the error.
+                #
+                # Reported as `unavailable`, NOT as `suppressed`. An earlier
+                # version reused the suppression flag here and defended it as
+                # "already an expected per-site outcome". That was wrong in
+                # two ways.
+                #
+                # First, it made one field mean three different things: cohort
+                # below threshold, inbound budget exhausted, or withdrawn
+                # consent. Only the first is a DP release; the other two are
+                # administrative and carry no noise. Collapsing them puts an
+                # unprotected signal on a channel whose privacy analysis covers
+                # only the protected one.
+                #
+                # Second, the three were distinguishable anyway. Withdrawal
+                # drops the site from `sites` entirely, and the other two
+                # separate on whether the inbound ledger moved -- a value
+                # `/federation/participants` publishes. So the conflation hid
+                # nothing and cost the response its precision.
+                #
+                # No epsilon is recorded for this site: nothing was read, so
+                # nothing was disclosed, so nothing is owed. Charging for an
+                # unread site inflates the reported total and makes the
+                # accounting describe work that never happened.
                 contributions.append(
-                    SiteContribution(tenant_id=site, suppressed=True)
-                )
-                per_site.append(
-                    NoisyCount(
-                        value=None,
-                        suppressed=True,
-                        epsilon_spent=query.epsilon,
-                        noise_scale=1.0 / query.epsilon,
-                    )
+                    SiteContribution(tenant_id=site, status=SiteStatus.UNAVAILABLE)
                 )
                 continue
 
@@ -347,7 +433,14 @@ def run_federated_cohort_query(
             noisy = privatize_count(true_count, epsilon=query.epsilon)
             per_site.append(noisy)
             contributions.append(
-                SiteContribution(tenant_id=site, suppressed=noisy.suppressed)
+                SiteContribution(
+                    tenant_id=site,
+                    status=(
+                        SiteStatus.SUPPRESSED
+                        if noisy.suppressed
+                        else SiteStatus.CONTRIBUTED
+                    ),
+                )
             )
 
         # Restore the requester's tenant: the loop rebound the session to each
@@ -364,7 +457,7 @@ def run_federated_cohort_query(
             requesting_tenant,
             query.fingerprint()[:12],
             len(sites),
-            sum(1 for c in contributions if not c.suppressed),
+            sum(1 for c in contributions if c.status is SiteStatus.CONTRIBUTED),
             total_cost,
             remaining,
         )
@@ -401,7 +494,7 @@ def run_federated_cohort_query(
             interval=interval,
             suppressed=combined.suppressed,
             sites_queried=len(sites),
-            sites_contributing=sum(1 for c in contributions if not c.suppressed),
+            sites_contributing=sum(1 for c in contributions if c.status is SiteStatus.CONTRIBUTED),
             epsilon_spent=total_cost,
             epsilon_remaining=remaining,
             noise_scale=combined.noise_scale,

@@ -29,6 +29,7 @@ import pytest
 
 from biovault.federation.accuracy import (
     DEFAULT_ALPHA,
+    count_noise_scale,
     epsilon_to_tolerance,
     interval_for,
     scale_to_tolerance,
@@ -215,6 +216,43 @@ def test_suppression_threshold_is_above_the_trivial_case() -> None:
     small, which is the entire reason suppression exists alongside noise.
     """
     assert MIN_COHORT_SIZE >= 2
+
+
+# --- The planner must describe the mechanism ---------------------------------
+
+
+@pytest.mark.parametrize("epsilon", EPSILONS)
+def test_planned_noise_scale_equals_delivered_noise_scale(epsilon: float) -> None:
+    """`/federation/precision` must not promise precision the query cannot give.
+
+    These were computed independently — `accuracy` divided by epsilon while
+    `privatize_count` divided by epsilon times the count's share — and they
+    diverged silently the moment the epsilon split was introduced. The planner
+    advertised +/-51.89 while real queries returned +/-103.78: an analyst
+    sizing a study against a nominal 95% interval was getting about 75% real
+    coverage, on the one endpoint whose entire purpose is honest planning.
+
+    Asserted as equality between the two rather than against a fixed number, so
+    changing the split moves both together or fails here.
+    """
+    planned = count_noise_scale(epsilon)
+    delivered = privatize_count(1000, epsilon=epsilon).noise_scale
+    assert planned == pytest.approx(delivered), (
+        f"planner says scale {planned} at epsilon={epsilon}, mechanism "
+        f"delivers {delivered}"
+    )
+
+
+@pytest.mark.parametrize("epsilon", EPSILONS)
+def test_planned_tolerance_equals_the_interval_a_query_returns(
+    epsilon: float,
+) -> None:
+    """The same agreement one level up, at the tolerance an analyst reads."""
+    planned = epsilon_to_tolerance(epsilon)
+    delivered = interval_for(
+        1000, scale=privatize_count(1000, epsilon=epsilon).noise_scale
+    ).tolerance
+    assert planned == pytest.approx(delivered)
 
 
 # --- Cross-implementation agreement ------------------------------------------

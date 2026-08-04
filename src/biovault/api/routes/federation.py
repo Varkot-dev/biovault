@@ -26,6 +26,7 @@ from biovault.federation.accuracy import (
     DEFAULT_ALPHA,
     MAX_ALPHA,
     MIN_ALPHA,
+    count_noise_scale,
     epsilon_to_tolerance,
     federated_tolerance,
 )
@@ -121,7 +122,7 @@ def precision_preview(
 
     try:
         single = epsilon_to_tolerance(epsilon, alpha)
-        combined = federated_tolerance([1.0 / epsilon] * sites, alpha)
+        combined = federated_tolerance([count_noise_scale(epsilon)] * sites, alpha)
     except PrivacyError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="invalid privacy parameters"
