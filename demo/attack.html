@@ -424,6 +424,11 @@
         <span class="val hidden-val">1</span>
         <span class="note">the person's genotype</span>
       </div>
+      <div>
+        <span class="lab">Answer you receive</span>
+        <span class="val" id="ci-demo">±30</span>
+        <span class="note">95% interval at current ε</span>
+      </div>
     </div>
   </section>
 
@@ -874,6 +879,9 @@
 
   function syncLabels() {
     $("eps-val").textContent = state.eps.toFixed(2);
+    // accuracy = -scale * ln(alpha); alpha=0.05 -> ln(20) ~ 3.0
+    // Same formula as biovault.federation.accuracy.scale_to_tolerance.
+    $("ci-demo").textContent = "\u00b1" + (-(1 / state.eps) * Math.log(0.05)).toFixed(0);
     $("budget-val").textContent = state.budget.toFixed(2);
 
     var eh = $("eps-hint");

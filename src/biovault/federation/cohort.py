@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import math
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -36,6 +37,13 @@ from sqlalchemy.orm import Session
 
 from biovault.db.rls import set_tenant_context
 from biovault.db.session import untenanted_session
+from biovault.federation.accuracy import (
+    DEFAULT_ALPHA,
+    MAX_ALPHA,
+    MIN_ALPHA,
+    ConfidenceInterval,
+    interval_for,
+)
 from biovault.federation.budget import DEFAULT_TOTAL_EPSILON, charge, remaining_epsilon
 from biovault.federation.privacy import (
     MAX_EPSILON,
@@ -64,12 +72,20 @@ class CohortQuery(BaseModel):
 
     variant_prefix: str = Field(min_length=2, max_length=40)
     epsilon: float = Field(default=DEFAULT_EPSILON, ge=MIN_EPSILON, le=MAX_EPSILON)
+    # Significance level for the returned interval. Does not affect the noise
+    # or the budget -- it only changes how the same uncertainty is reported,
+    # so it is deliberately not part of the query fingerprint.
+    alpha: float = Field(default=DEFAULT_ALPHA, ge=MIN_ALPHA, le=MAX_ALPHA)
 
     def fingerprint(self) -> str:
         """Stable hash identifying this query.
 
         Recorded on every budget debit so a run of identical fingerprints —
         the signature of an averaging attack — is visible to an auditor.
+
+        `alpha` is excluded: it changes only the presentation of uncertainty,
+        not what was asked. Including it would let an attacker vary alpha to
+        make repeated identical queries look distinct in the audit trail.
         """
         return hashlib.sha256(
             f"variant_prefix={self.variant_prefix}".encode()
@@ -91,11 +107,18 @@ class SiteContribution(BaseModel):
 
 
 class FederatedCohortResult(BaseModel):
-    """The answer to a federated cohort query."""
+    """The answer to a federated cohort query.
+
+    `total` is never returned without `interval`. A bare noised integer invites
+    an analyst to treat it as exact — at the default epsilon the 95% interval
+    is roughly ±30, which is the difference between a usable finding and a
+    spurious one.
+    """
 
     model_config = ConfigDict(frozen=True)
 
     total: int | None
+    interval: ConfidenceInterval | None
     suppressed: bool
     sites_queried: int
     sites_contributing: int
@@ -194,8 +217,23 @@ def run_federated_cohort_query(
             remaining,
         )
 
+        # Interval derived from the per-site scales that actually contributed.
+        # Independent variances add, so a federated total is necessarily less
+        # precise than any single site's answer.
+        contributing_scales = [
+            c.noise_scale for c in per_site if not c.suppressed
+        ]
+        interval = None
+        if combined.value is not None and contributing_scales:
+            interval = interval_for(
+                combined.value,
+                scale=math.sqrt(sum(s**2 for s in contributing_scales)),
+                alpha=query.alpha,
+            )
+
         return FederatedCohortResult(
             total=combined.value,
+            interval=interval,
             suppressed=combined.suppressed,
             sites_queried=len(sites),
             sites_contributing=sum(1 for c in contributions if not c.suppressed),
