@@ -635,6 +635,76 @@ unanswerable.
 
 ---
 
+## D38 — Every private count ships with a confidence interval
+
+**Decision.** `FederatedCohortResult.total` is never returned without
+`interval`. Derived from the Laplace tail bound `accuracy = -scale * ln(alpha)`,
+matching OpenDP's `laplacian_scale_to_accuracy`.
+
+**Why.** A bare noised integer is a misleading answer. At the default epsilon a
+returned count of `12` has a 95% interval of `0-55` — an analyst without that
+interval will publish a finding that isn't there. Returning the interval is the
+difference between a number and a measurement.
+
+**Verified, not assumed.** Empirical coverage across scales 2/10/20 and alpha
+0.01/0.05/0.10 lands within 0.15% of nominal in all nine configurations.
+
+**Federated combination.** Per-site variances add, so the combined tolerance is
+the root-sum-of-squares. Applying a single-Laplace tail bound to that combined
+scale is conservative — a sum of independent Laplace variables has lighter
+tails — measured at 95.5-96.0% against a nominal 95%.
+
+**Scope stated in the code.** The interval bounds *only* the privacy noise. Not
+sampling error, not selection bias. Presenting it as a total error bar would
+understate the real uncertainty.
+
+---
+
+## D39 — `/federation/precision` costs no budget
+
+**Decision.** An endpoint returning the tolerance implied by an epsilon, before
+any query runs.
+
+**Why.** Tolerance depends only on epsilon and site count, never on the data,
+so exposing it is free. Without it an analyst discovers mid-study that every
+answer is too noisy to publish — having already burned the budget producing
+nothing. At epsilon=0.1 the answer is +/-30 with 10 queries affordable, which is
+often enough to establish that a question is not answerable at all.
+
+---
+
+## D40 — Review corrections to the accuracy work
+
+An independent review re-derived the math and simulated the bounds. Zero
+critical or high findings; the derivation and the conservative federated
+combination both held. Three things it surfaced were worth writing down:
+
+**The fingerprint comment was framed wrong.** I had written that `alpha` is
+excluded from `CohortQuery.fingerprint()` to stop an attacker fragmenting their
+audit trail. The reasoning is right but the framing implied alpha needed a
+special carve-out — in fact the hash only ever covered `variant_prefix`, so the
+protection is structural. The real risk is a *future* field being added "for
+completeness." The comment now states the rule: before adding a field to the
+hash, ask whether two queries differing only in that field are asking about the
+same people.
+
+**Interval width is data-dependent, and now says so.** Suppression is decided
+from each site's true count, so `sites_contributing` — and therefore the
+reported tolerance — depends on the data. This is not a new disclosure, since
+`sites_contributing` is already returned in plaintext deliberately. But the
+accuracy module's data-independence claim was true only in isolation from its
+caller, and the coupling is now documented at the call site.
+
+**Clamping before summation does not break the bound.** Each site clamps at
+zero before the federated sum, which the tolerance formula does not model —
+this looks like a hole. It is not: true counts are non-negative, so clamping
+only moves an estimate toward the truth. Verified at the worst available case
+(epsilon=0.01, counts at the suppression floor, a site clamping ~half the
+time): coverage 96.6-97.2% against nominal 95%. Recorded in the docstring so a
+future reader does not have to rediscover why it is safe.
+
+---
+
 ## Final measured state
 
 Clean database (`docker compose down -v`, rebuild, re-bootstrap), full run:

@@ -83,9 +83,19 @@ class CohortQuery(BaseModel):
         Recorded on every budget debit so a run of identical fingerprints —
         the signature of an averaging attack — is visible to an auditor.
 
-        `alpha` is excluded: it changes only the presentation of uncertainty,
-        not what was asked. Including it would let an attacker vary alpha to
-        make repeated identical queries look distinct in the audit trail.
+        **The hash is deliberately narrow: it covers `variant_prefix` and
+        nothing else.** Only the predicate identifies *what was asked*.
+        `epsilon` and `alpha` control how precisely the answer is reported, not
+        which individuals it concerns, so varying them must not produce a new
+        fingerprint.
+
+        This matters for any field added later. A field included here "for
+        completeness" would hand an attacker a way to fragment their own audit
+        trail: ask the same question a hundred times with a hundred slightly
+        different values, and a hundred distinct fingerprints make an averaging
+        attack look like ordinary varied research. Before adding a field to
+        this hash, ask whether two queries differing only in that field are
+        asking about the same people. If they are, leave it out.
         """
         return hashlib.sha256(
             f"variant_prefix={self.variant_prefix}".encode()
@@ -220,6 +230,19 @@ def run_federated_cohort_query(
         # Interval derived from the per-site scales that actually contributed.
         # Independent variances add, so a federated total is necessarily less
         # precise than any single site's answer.
+        #
+        # Note what this couples: suppression is decided from each site's TRUE
+        # count, so the number of contributing sites -- and therefore the
+        # reported tolerance -- is data-dependent. Interval width is an
+        # invertible function of `sites_contributing` (at eps=0.1: +/-42.4 for
+        # two sites, +/-67.0 for five).
+        #
+        # That is not a new disclosure: `sites_contributing` is already
+        # returned in plaintext below, deliberately, so an analyst knows how
+        # much of the consortium answered. But it does mean the interval is not
+        # purely a function of public parameters, and anyone who later tries to
+        # hide `sites_contributing` while keeping the interval would be
+        # leaking it anyway.
         contributing_scales = [
             c.noise_scale for c in per_site if not c.suppressed
         ]
