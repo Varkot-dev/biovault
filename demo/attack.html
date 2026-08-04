@@ -542,10 +542,16 @@
 
     <h2>Where this still fails</h2>
     <p>
-      Even at the BioVault default, <strong>14.5% of measured trials still landed within ±1
+      Even at the BioVault default, <strong>about 5% of measured trials still land within ±1
       of the true count</strong>. Differential privacy bounds <em>expected</em> leakage; it does
-      not eliminate it. Spam the attack a few times at ε&nbsp;=&nbsp;1.0 and you will win
-      some of them. That number is published rather than hidden because a privacy claim
+      not eliminate it. Run the attack enough times and you will win some of them.
+    </p>
+    <p>
+      This figure has moved twice, and both moves are published rather than quietly swapped.
+      It read 14.3% while the server charged ε once per federated query instead of once per
+      site — undercounting real privacy loss threefold — and moved again when the suppression
+      decision started paying for itself out of the same budget. Both corrections tightened
+      the real guarantee, which is why the honest numbers kept going down. A privacy claim
       you cannot falsify is not a claim.
     </p>
   </section>

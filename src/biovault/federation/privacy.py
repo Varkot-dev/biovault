@@ -45,6 +45,16 @@ from pydantic import BaseModel, ConfigDict
 
 # Sensitivity of a counting query: adding or removing one individual changes
 # the result by at most 1.
+#
+# This is a claim about the QUERY, not just a constant. It holds only because
+# `_count_matching_records` counts DISTINCT subjects rather than rows -- see
+# that function. Counting rows would make sensitivity equal to the maximum
+# number of rows one subject can contribute, which nothing bounds, and every
+# epsilon figure downstream would silently overstate the protection delivered.
+#
+# Anything that changes what the federated query counts must revisit this
+# value. `test_sensitivity_assumption_holds` asserts the property directly
+# against the database rather than trusting this comment.
 COUNT_SENSITIVITY: Final[float] = 1.0
 
 # Counts below this are suppressed entirely rather than noised. Noise protects

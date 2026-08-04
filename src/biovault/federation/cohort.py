@@ -36,7 +36,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from biovault.db.rls import set_tenant_context
-from biovault.db.session import untenanted_session
+from biovault.db.session import ledger_session, untenanted_session
 from biovault.federation.accuracy import (
     DEFAULT_ALPHA,
     MAX_ALPHA,
@@ -173,11 +173,38 @@ def _count_matching_records(session: Session, *, tenant_id: str, gene: str) -> i
     character at a time until it isolates an individual. Exact match against a
     controlled vocabulary admits neither: the predicate either names a real
     gene or matches nothing.
+
+    ## Counts subjects, not rows
+
+    `COUNT(DISTINCT specimen_label)`, not `COUNT(*)`. The two differ, and the
+    difference is a privacy bug rather than a rounding detail.
+
+    The Laplace mechanism adds noise calibrated to the query's *sensitivity* —
+    how much one individual joining or leaving can move the answer. Every
+    epsilon figure in this system assumes that is 1. `COUNT(*)` breaks the
+    assumption the moment one subject has two rows matching one gene, which is
+    not hypothetical: compound heterozygosity (two pathogenic variants in the
+    same gene) is the textbook clinical case for BRCA1 and CFTR, both in the
+    seed vocabulary. Longitudinal resequencing and tumour/normal pairs do the
+    same.
+
+    Under `COUNT(*)`, a subject with k rows moves the count by k while the
+    mechanism still adds Laplace(1/epsilon). Delivered privacy silently
+    degrades to k*epsilon while every ledger records epsilon -- the same class
+    of error as charging epsilon once for a release that costs epsilon per
+    site, on the sensitivity axis instead of the composition axis.
+
+    `COUNT(DISTINCT specimen_label)` makes sensitivity 1 true by construction:
+    one subject changes the result by at most one, whatever their row count.
+    `specimen_label` is a *within-tenant* identifier, which is why this fix
+    needs no cross-tenant linkage and does not touch the isolation model.
+    Bounding a subject's exposure *across* labs is a separate and much harder
+    problem -- see the design note on the unit of privacy.
     """
     set_tenant_context(session.connection(), tenant_id)
 
     return session.execute(
-        select(func.count())
+        select(func.count(func.distinct(GenomicRecord.specimen_label)))
         .select_from(GenomicRecord)
         .where(GenomicRecord.gene_symbol == gene)
     ).scalar_one()
@@ -241,26 +268,39 @@ def run_federated_cohort_query(
         # overlap cannot be ruled out.
         total_cost = query.epsilon * len(sites)
 
-        # Charge first. This raises BudgetExhausted before anything is read.
-        remaining = charge(
-            session,
-            tenant_id=requesting_tenant,
-            actor_id=actor_id,
-            epsilon=total_cost,
-            query_fingerprint=query.fingerprint(),
-            total_budget=total_budget,
-        )
+        # Charge first, ON ITS OWN COMMITTED TRANSACTION. Raises
+        # BudgetExhausted before anything is read.
+        #
+        # The separate transaction is the load-bearing part. `charge()` used to
+        # run inside this function's session, which flushes but does not commit
+        # until the function returns -- so any later exception rolled the debit
+        # back while the site reads had already happened. Measured: 30
+        # deliberately-aborted queries performed 90 site reads across three
+        # labs and left both ledgers at exactly zero, which is unlimited free
+        # querying and defeats the budget outright.
+        #
+        # A privacy debit and a data read have opposite atomicity needs. The
+        # read either happened or it did not, and if it happened the
+        # disclosure is real whether or not the caller ever saw the response.
+        # So the debit must outlive the transaction that triggered it.
+        with ledger_session(requesting_tenant) as ledger:
+            remaining = charge(
+                ledger,
+                tenant_id=requesting_tenant,
+                actor_id=actor_id,
+                epsilon=total_cost,
+                query_fingerprint=query.fingerprint(),
+                total_budget=total_budget,
+            )
 
         per_site: list[NoisyCount] = []
         contributions: list[SiteContribution] = []
 
         for site in sites:
-            # Bind the SOURCE lab before charging its inbound ledger: the
-            # ledger is tenant-scoped, so the row must land under the lab whose
-            # patients bear the disclosure, not the lab that paid.
-            set_tenant_context(session.connection(), site)
-
-            # Charge the source lab's extraction ceiling before reading it.
+            # Charge the source lab's extraction ceiling before reading it, on
+            # its own committed transaction for the same reason as the outbound
+            # charge above: the read is what discloses, so the debit must
+            # survive a later failure of this query.
             #
             # The outbound budget alone does not bound this. It is charged to
             # the querier, so with N participating labs each holding an
@@ -270,14 +310,15 @@ def run_federated_cohort_query(
             # counterpart that lets a lab bound what is taken *from* it,
             # regardless of how many others are asking.
             try:
-                record_extraction(
-                    session,
-                    tenant_id=site,
-                    querying_tenant_id=requesting_tenant,
-                    actor_id=actor_id,
-                    epsilon=query.epsilon,
-                    query_fingerprint=query.fingerprint(),
-                )
+                with ledger_session(site) as ledger:
+                    record_extraction(
+                        ledger,
+                        tenant_id=site,
+                        querying_tenant_id=requesting_tenant,
+                        actor_id=actor_id,
+                        epsilon=query.epsilon,
+                        query_fingerprint=query.fingerprint(),
+                    )
             except (InboundBudgetExhausted, SiteNotParticipating):
                 # A site that cannot or will not answer is skipped, not fatal.
                 # Failing the whole query would let one exhausted lab deny the

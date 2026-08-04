@@ -89,3 +89,41 @@ def untenanted_session() -> Iterator[Session]:
         raise
     finally:
         session.close()
+
+
+@contextmanager
+def ledger_session(tenant_id: str) -> Iterator[Session]:
+    """Yield a session for a privacy-ledger write that must survive failure.
+
+    A privacy ledger and ordinary data work have **opposite** atomicity
+    requirements, and this exists because putting them in one transaction gets
+    the ledger's requirement backwards.
+
+    A data transaction must roll back on error: committing half a write is
+    worse than committing none. But a privacy debit must *persist* even when
+    the query it paid for fails, because the disclosure already happened —
+    the rows were read off disk regardless of whether the response was ever
+    returned. Rolling the debit back means the read was free.
+
+    That was not hypothetical. With the charge sharing the query's
+    transaction, 30 deliberately-aborted queries performed 90 site reads
+    across three labs and left both ledgers reading exactly zero. Repeating it
+    averages the noise away, which is the precise attack `budget.py` says the
+    ledger exists to prevent. No attacker is required either: a statement
+    timeout, a connection reset, or a client disconnect unwinds identically.
+
+    So this commits on its own connection, before the caller does any reading.
+    A charge, once made, is durable no matter what happens next. The cost of
+    getting it wrong in this direction is a caller charged for an answer they
+    never received — a loss of utility, not of privacy.
+    """
+    session = _app_sessionmaker()()
+    try:
+        set_tenant_context(session.connection(), tenant_id)
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

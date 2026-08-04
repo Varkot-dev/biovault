@@ -243,3 +243,62 @@ def test_demo_javascript_matches_the_python_constants() -> None:
         f"demo COUNT_SHARE disagrees with THRESHOLD_EPSILON_FRACTION "
         f"({THRESHOLD_EPSILON_FRACTION}); expected {count_share}"
     )
+
+
+# Attacker-success figures that were measured, superseded, and corrected. Prose
+# is where stale numbers hide: a constant gets updated and a sentence three
+# hundred lines away keeps quoting the old value.
+#
+# A superseded figure may still appear in text that explicitly describes it as
+# superseded — that history is deliberately published. What must not appear is
+# a superseded figure presented as current. The heuristic below is crude but it
+# caught a real one: the demo carried "14.5% of measured trials still landed
+# within +/-1" long after two corrections had moved that number to ~5%.
+SUPERSEDED_FIGURES = ("40.3%", "14.5%", "14.3%", "25.0%", "8.0%")
+
+
+@pytest.mark.parametrize("doc", ["demo/attack.html", "README.md"])
+def test_superseded_figures_are_not_presented_as_current(doc: str) -> None:
+    """A corrected number must not survive somewhere nobody looked.
+
+    Each occurrence of a superseded figure must sit within a sentence that
+    frames it as historical. Anything else is a stale claim.
+    """
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[2] / doc
+    if not path.exists():
+        pytest.skip(f"{doc} not present")
+
+    text = path.read_text(encoding="utf-8")
+    history_markers = (
+        "previously",
+        "earlier",
+        "moved twice",
+        "superseded",
+        "it read",
+        "they read",
+        "has moved",
+        "have moved",
+        "corrected",
+        "was wrong",
+    )
+
+    stale: list[str] = []
+    for figure in SUPERSEDED_FIGURES:
+        start = 0
+        while (idx := text.find(figure, start)) != -1:
+            # Look at the surrounding sentence, not the whole document: a
+            # history note elsewhere in the file must not launder an unrelated
+            # stale figure.
+            window = text[max(0, idx - 400) : idx + 200].lower()
+            if not any(marker in window for marker in history_markers):
+                line = text.count("\n", 0, idx) + 1
+                stale.append(f"{figure} at {doc}:{line}")
+            start = idx + len(figure)
+
+    assert not stale, (
+        "superseded attacker-success figures presented as current: "
+        f"{stale}. Either re-measure and update, or frame the number as "
+        "historical."
+    )
