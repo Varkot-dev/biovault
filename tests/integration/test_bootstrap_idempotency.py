@@ -55,26 +55,64 @@ def test_apply_rls_policies_is_idempotent(owner_conn, live_settings) -> None:
         assert table in installed
 
 
-def test_reapplying_policies_leaves_exactly_one_policy_per_table(
+def test_reapplying_policies_does_not_accumulate_duplicates(
     owner_conn, live_settings
 ) -> None:
     """Duplicate policies would OR together and could widen access.
 
-    PostgreSQL combines multiple permissive policies with OR, so a second
-    policy accumulating on re-run would loosen isolation rather than tighten
-    it. DROP-then-CREATE prevents that.
+    PostgreSQL combines multiple *permissive* policies with OR, so a policy
+    accumulating on each re-run would progressively loosen isolation rather
+    than tighten it — and `bootstrap()` runs on every container start.
+    DROP-then-CREATE prevents that.
+
+    `users` carries two policies by design: tenant isolation plus the narrow
+    pre-authentication identity lookup. That pair is intentional and its blast
+    radius is asserted in `tests/security/test_auth_lookup_policy.py`. Every
+    other table must carry exactly one.
     """
+    expected = {table: 1 for table in TENANT_SCOPED_TABLES}
+    expected["users"] = 2  # tenant isolation + auth lookup
+
+    apply_rls_policies(owner_conn, app_role=live_settings.app_db_user)
     apply_rls_policies(owner_conn, app_role=live_settings.app_db_user)
     apply_rls_policies(owner_conn, app_role=live_settings.app_db_user)
 
-    for table in TENANT_SCOPED_TABLES:
+    for table, want in expected.items():
         count = owner_conn.execute(
             text(
                 "SELECT count(*) FROM pg_policies "
                 "WHERE schemaname = 'public' AND tablename = :t"
             ).bindparams(t=table)
         ).scalar_one()
-        assert count == 1, f"{table} has {count} policies; duplicates widen access"
+        assert count == want, (
+            f"{table} has {count} policies, expected {want}; "
+            "duplicates OR together and widen access"
+        )
+
+
+def test_only_users_carries_an_extra_policy(owner_conn, live_settings) -> None:
+    """Guards against a future exception being added without scrutiny.
+
+    Any second permissive policy on a tenant-scoped table widens access by
+    construction. This test fails if one appears anywhere but `users`, forcing
+    the author to justify it rather than have it merge unnoticed.
+    """
+    apply_rls_policies(owner_conn, app_role=live_settings.app_db_user)
+
+    multi_policy = [
+        table
+        for table in TENANT_SCOPED_TABLES
+        if owner_conn.execute(
+            text(
+                "SELECT count(*) FROM pg_policies "
+                "WHERE schemaname = 'public' AND tablename = :t"
+            ).bindparams(t=table)
+        ).scalar_one()
+        > 1
+    ]
+    assert multi_policy == ["users"], (
+        f"unexpected tables with multiple permissive policies: {multi_policy}"
+    )
 
 
 def test_set_and_clear_tenant_context_round_trip(owner_conn) -> None:

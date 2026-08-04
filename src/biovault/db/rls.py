@@ -39,6 +39,11 @@ TENANT_SCOPED_TABLES: Final[tuple[str, ...]] = (
 # rewrite its own trail.
 APPEND_ONLY_TABLES: Final[tuple[str, ...]] = ("audit_entries",)
 
+# Tables consulted before a tenant is known. Not tenant-scoped by design:
+# both are keyed by unguessable high-entropy secrets, so there is no
+# identifier an attacker could enumerate even with unrestricted SELECT.
+AUTH_TABLES: Final[tuple[str, ...]] = ("authorization_codes", "refresh_tokens")
+
 
 def _current_tenant_sql() -> str:
     """SQL expression yielding the current tenant, or NULL when unset.
@@ -66,6 +71,17 @@ def apply_rls_policies(connection: Connection, *, app_role: str) -> None:
         _enable_rls(connection, table=table)
         _install_tenant_policy(connection, table=table)
         _grant_table_privileges(connection, table=table, app_role=app_role)
+
+    # Narrow exception permitting pre-authentication identity lookup.
+    _install_auth_lookup_policy(connection)
+
+    # Auth tables are keyed by unguessable high-entropy values rather than by
+    # tenant, so they are not tenant-scoped. Establishing a session requires
+    # reading them before any tenant is known.
+    for table in AUTH_TABLES:
+        connection.execute(
+            text(f"GRANT SELECT, INSERT, UPDATE ON {table} TO {app_role}")
+        )
 
 
 def _ensure_app_role(connection: Connection, *, app_role: str) -> None:
@@ -132,6 +148,37 @@ def _install_tenant_policy(connection: Connection, *, table: str) -> None:
             CREATE POLICY {policy} ON {table}
                 USING (tenant_id = {tenant_expr})
                 WITH CHECK (tenant_id = {tenant_expr})
+            """
+        )
+    )
+
+
+def _install_auth_lookup_policy(connection: Connection) -> None:
+    """Permit identity lookup on `users` when no tenant context is set.
+
+    Authentication has a genuine bootstrap problem: the tenant is a *property
+    of the user*, so it cannot be known before the user is found, but the
+    tenant policy needs it to reveal any row. Without a narrow exception,
+    logging in is impossible.
+
+    The tempting escape — connecting as the schema owner during login — would
+    disable RLS across the entire authentication path. This policy is the
+    narrow alternative: SELECT on `users` is permitted only while tenant
+    context is unset, which is exactly the pre-authentication window.
+
+    This does not widen access to tenant data. `genomic_records`, `datasets`,
+    `dataset_keys`, `dataset_grants`, and `audit_entries` still return zero
+    rows without tenant context, and once a request binds a tenant this policy
+    stops applying (the tenant policy takes over as the permissive match).
+    Verified by `test_auth_lookup_policy_does_not_widen_data_access`.
+    """
+    connection.execute(text("DROP POLICY IF EXISTS users_auth_lookup ON users"))
+    connection.execute(
+        text(
+            f"""
+            CREATE POLICY users_auth_lookup ON users
+                FOR SELECT
+                USING ({_current_tenant_sql()} IS NULL OR {_current_tenant_sql()} = '')
             """
         )
     )

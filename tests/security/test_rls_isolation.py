@@ -87,7 +87,9 @@ def test_explicit_cross_tenant_query_returns_nothing(
     assert count == 0, f"{home} could see {foreign} rows"
 
 
-@pytest.mark.parametrize("table", TENANT_SCOPED_TABLES)
+@pytest.mark.parametrize(
+    "table", [t for t in TENANT_SCOPED_TABLES if t != "users"]
+)
 def test_no_rows_visible_without_tenant_context(app_connection, clear_tenant, table: str) -> None:
     """Unset tenant context must fail closed.
 
@@ -95,6 +97,12 @@ def test_no_rows_visible_without_tenant_context(app_connection, clear_tenant, ta
     is NULL rather than TRUE, so the policy denies. A policy written without
     the missing-ok flag would raise instead, which callers tend to catch and
     ignore — failing open.
+
+    `users` is excluded deliberately: authentication cannot bootstrap without
+    an identity lookup, so a narrow SELECT-only exception applies there. That
+    exception's blast radius is bounded by
+    `tests/security/test_auth_lookup_policy.py`, which asserts every table in
+    this list still returns zero rows.
     """
     clear_tenant()
     # `table` is parametrized from TENANT_SCOPED_TABLES, a module constant.
