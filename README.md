@@ -46,29 +46,37 @@ curl -X POST localhost:8000/federation/cohort-count \
 
 ```json
 {
-  "total": 150,
-  "interval": { "lower": 65, "upper": 235, "tolerance": 84.7, "confidence": 0.95 },
+  "total": 264,
+  "interval": { "lower": 160, "upper": 368, "tolerance": 103.8, "confidence": 0.95 },
   "sites_queried": 3,
-  "sites_contributing": 2,
+  "sites_contributing": 3,
   "epsilon_spent": 0.3,
   "epsilon_remaining": 0.7,
   "contributions": [
-    {"tenant_id": "lab-broad",  "suppressed": false},
-    {"tenant_id": "lab-riken",  "suppressed": false},
-    {"tenant_id": "lab-sanger", "suppressed": true}
+    {"tenant_id": "lab-broad",  "status": "contributed"},
+    {"tenant_id": "lab-riken",  "status": "contributed"},
+    {"tenant_id": "lab-sanger", "status": "contributed"}
   ]
 }
 ```
 
-The true total across the three labs is 226; the interval covers it. Sanger is
-suppressed here: small cohorts are withheld, because noise cannot hide the
-difference between *nobody* and *somebody*. That decision is itself randomized
-— comparing the true count to the threshold would publish an exact bit of
-`count > 5` per lab per query, free of charge, which is a differencing attack
-delivered one bit at a time. No record, identifier, or exact per-site count appears anywhere in
-that response — asserted by
-`test_response_contains_no_record_level_data`, which scans the raw body for
-known specimen labels, dataset ids, and payload content.
+The true total across the three labs is **226**, and the interval covers it.
+
+`status` is three-valued, not a boolean. `suppressed` means the site was read
+and its noised count fell below threshold — a differentially private release.
+`unavailable` means the site was never read at all (withdrawn consent, or its
+inbound ceiling exhausted), so no noise was drawn and no ε is owed. Collapsing
+those into one flag put an unprotected administrative signal on a channel whose
+privacy analysis covers only the protected one.
+
+The suppression decision is itself randomized. Comparing the *true* count to
+the threshold would publish an exact bit of `count > 5` per lab per query, free
+of charge — a differencing attack delivered one bit at a time.
+
+No record, identifier, or exact per-site count appears anywhere in that
+response, asserted by `test_response_contains_no_record_level_data`, which
+scans the raw body for known specimen labels, dataset ids, and payload
+content.
 
 ### The answer is an interval, not a number
 
@@ -92,17 +100,23 @@ Analysts can size a study *before* spending anything:
 
 ```bash
 curl "localhost:8000/federation/precision?epsilon=0.1&sites=3"
-# {"single_site_tolerance": 29.96, "federated_tolerance": 51.89,
+# {"single_site_tolerance": 59.9, "federated_tolerance": 103.78,
 #  "queries_affordable": 3, "confidence": 0.95}
 ```
 
-| ε | 95% tolerance | federated queries affordable (3 sites) |
-|---:|---:|---:|
-| 0.01 | ±299.6 | 33 |
-| 0.05 | ±59.9 | 6 |
-| 0.1 | ±30.0 | 3 |
-| 0.5 | ±6.0 | 0 |
-| 1.0 | ±3.0 | 0 |
+| ε | single-site 95% tolerance | federated (3 sites) | queries affordable |
+|---:|---:|---:|---:|
+| 0.01 | ±599.1 | ±1037.8 | 33 |
+| 0.05 | ±119.8 | ±207.6 | 6 |
+| 0.1 | ±59.9 | ±103.8 | 3 |
+| 0.5 | ±12.0 | ±20.8 | 0 |
+| 1.0 | ±6.0 | ±10.4 | 0 |
+
+These are wider than a naive `1/ε` would suggest, because the count receives
+only half the query's ε — the suppression decision is a release of its own and
+pays for itself out of the same budget. An earlier version of this endpoint
+divided by ε alone and advertised half the true figure, which meant an analyst
+planning against a nominal 95% interval was getting about 75% real coverage.
 
 That table is the entire design space, and it is deliberately uncomfortable:
 precision and privacy trade directly against each other, the budget caps how
@@ -134,15 +148,15 @@ budget of 1.0 at ε=0.1 buys 3 queries. Over 400 full attacks each:
 
 | ε_total | queries allowed | attacker pins the individual (±1) |
 |---:|---:|---:|
-| 10.0 — *the tutorial default* | 33 | **14.2%** |
-| **1.0 — BioVault default** | 3 | **4.5%** |
+| 10.0 — *the tutorial default* | 33 | **11.7%** |
+| **1.0 — BioVault default** | 3 | **4.3%** |
 
 ε_total = 10.0 appears in plenty of DP tutorials. It lets an attacker state a
-specific person's genotype in roughly **one attempt in seven** — not a privacy
+specific person's genotype in roughly **one attempt in nine** — not a privacy
 guarantee in any useful sense.
 
 **What 1.0 does not do:** it does not defeat the differencing attack. It cuts
-the attacker's per-attempt success rate from ~14% to ~5%. Differential privacy
+the attacker's per-attempt success rate from ~12% to ~4%. Differential privacy
 bounds *expected* leakage; it does not eliminate it.
 
 Two corrections are recorded rather than quietly folded in, because a privacy
@@ -169,11 +183,23 @@ Last run against a freshly wiped database (`docker compose down -v`, rebuild,
 re-bootstrap):
 
 ```
-383 passed          ruff clean          pip-audit: 72 packages, 0 vulnerabilities
+443 passed          ruff clean          pip-audit: 72 packages, 0 vulnerabilities
 ```
 
-| Suite | Tests |
-|---|---:|
+Most of these are negative cases — the suite is weighted toward proving the
+system refuses things, not that it works. Three files exist specifically to
+catch the bug *class* that has produced every serious defect here:
+
+| File | What it guards |
+|---|---|
+| `test_privacy_invariants.py` | Conservation laws — ε in equals ε out, planner agrees with mechanism. Encodes relationships, not values, so changing a parameter cannot silently invalidate it. |
+| `test_ledger_durability.py` | A privacy debit survives the failure of the query it paid for. |
+| `test_sensitivity.py` | One subject moves a count by at most 1, asserted against the database rather than assumed. |
+
+Each was verified to **fail** against the defect it describes before being
+committed. A guard never observed failing is not known to work.
+
+---|---:|
 | Authorization policy | 79 |
 | API access control — IDOR, SQLi, roles, PHI | 46 |
 | Differential privacy — noise, suppression, differencing | 34 |

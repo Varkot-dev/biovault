@@ -529,14 +529,14 @@
           <tr><th>ε total</th><th>ε / query</th><th>Queries</th><th>Median error</th><th>Attacker wins</th></tr>
         </thead>
         <tbody>
-          <tr class="flag"><td>10.0</td><td>0.1</td><td>33</td><td>4.48</td><td>14.2% success</td></tr>
-          <tr class="pick"><td>1.0</td><td>0.1</td><td>3</td><td>14.67</td><td>4.5% success</td></tr>
+          <tr class="flag"><td>10.0</td><td>0.1</td><td>33</td><td>4.67</td><td>11.7% success</td></tr>
+          <tr class="pick"><td>1.0</td><td>0.1</td><td>3</td><td>14.67</td><td>4.3% success</td></tr>
         </tbody>
       </table>
     </div>
     <p>
       <code>ε_total = 10.0</code> appears in plenty of tutorials and lets an attacker state a
-      specific person's genotype in roughly one attempt in seven. Try the tutorial preset and hit
+      specific person's genotype in roughly one attempt in nine. Try the tutorial preset and hit
       <em>Run 400 full attacks</em>.
     </p>
 
@@ -760,7 +760,7 @@
         "Your estimate is <code>" + est.toFixed(2) + "</code> against a true difference of " +
         "<code>1</code>. After <code>" + n + "</code> quer" + (n === 1 ? "y" : "ies") +
         " you can state that person's genotype. At ε_total=<code>" + state.budget.toFixed(1) +
-        "</code> this happens in roughly <b>" + (state.budget >= 10 ? "14%" : state.budget >= 2 ? "8%" : "5%") +
+        "</code> this happens in roughly <b>" + (state.budget >= 10 ? "12%" : state.budget >= 2 ? "7%" : "4%") +
         "</b> of attempts — hit Reset and run it again.");
     } else if (final && err <= 2) {
       setVerdict("cut", "Near miss — off by " + err.toFixed(2),

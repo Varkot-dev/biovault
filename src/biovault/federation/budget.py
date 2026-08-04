@@ -49,8 +49,8 @@ from biovault.models.tables import PrivacyBudgetEntry
 # a true count of 500 under that accounting:
 #
 #     e_total   e/query   queries   median err   pins the individual (+/-1)
-#      10.0       0.1        33        4.48              14.2%
-#       1.0       0.1         3       14.67               4.5%
+#      10.0       0.1        33        4.67              11.7%
+#       1.0       0.1         3       14.67               4.3%
 #
 # e_total=10.0 appears in plenty of DP tutorials. It lets an attacker state a
 # specific person's genotype in roughly one attempt in seven, which is not a
