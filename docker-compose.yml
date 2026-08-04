@@ -22,7 +22,11 @@ services:
       db:
         condition: service_healthy
     environment:
-      POSTGRES_HOST: db
+      # Defaults to the service name on the Compose network. A `.env` carrying
+      # POSTGRES_HOST=localhost would otherwise win here -- Compose injects
+      # .env into the service environment and it overrides this block -- and
+      # the API would fail to resolve the database from inside the network.
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
       POSTGRES_PORT: 5432
       POSTGRES_USER: ${POSTGRES_USER:-biovault_owner}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}

@@ -870,6 +870,46 @@ another in or forge a withdrawal.
 
 ---
 
+## D46 — The README quickstart did not work from a clean clone (bug fix)
+
+**The bug.** `.env.example` set `POSTGRES_HOST=localhost`. Docker Compose loads
+`.env` into the service environment *and* gives it precedence over the compose
+file's own `environment:` block, so `localhost` overrode the `db` service name
+and the API could not resolve the database from inside the network:
+
+```
+sqlalchemy.exc.OperationalError: failed to resolve host 'db'
+```
+
+`docker compose up` — the first command in the README — failed for anyone
+following it. It worked locally only because the development `.env` had been
+hand-edited months of commits ago and never regenerated from the example.
+
+**How it was found.** By cloning the public repo into a fresh directory and
+running the documented quickstart verbatim, rather than assuming the local
+working copy represented what a reader gets. Every prior verification ran
+against a `.env` that no new user would ever have.
+
+**Fix.** `.env.example` now ships `POSTGRES_HOST=db`, which is what the
+documented path needs, with a comment explaining the precedence trap and how to
+override it for host-side work. `docker-compose.yml` uses
+`${POSTGRES_HOST:-db}` so the default survives a missing variable. The README's
+verification and development sections now say to export
+`POSTGRES_HOST=localhost` when running tests from the host, because those
+connect from outside the Compose network.
+
+**Verified.** Fresh clone → fill `.env` from the example → `docker compose up`
+→ API healthy in 5 polls, federated query returns all three sites contributing
+(total 329, interval 225–433 covering the true 226), unauthenticated requests
+still 401.
+
+**Worth noting.** CI was correct only by accident: its docker job writes a
+`.env` that omits `POSTGRES_HOST` entirely, so the compose default applied,
+while the test jobs get `localhost` from the workflow environment. Both paths
+happened to be right for different reasons.
+
+---
+
 ## Final measured state
 
 Clean database (`docker compose down -v`, rebuild, re-bootstrap), full run:

@@ -222,7 +222,13 @@ The API listens on `http://localhost:8000`; interactive docs at `/docs`.
 ## Verifying the claims
 
 Each row names the exact command that substantiates it. Integration tests need
-a running PostgreSQL — `docker compose up -d db` first.
+a running PostgreSQL, and they connect from your host rather than from inside
+the Compose network:
+
+```bash
+docker compose up -d db
+export POSTGRES_HOST=localhost    # .env says `db`, which only resolves in-network
+```
 
 | Claim | Verify with |
 |---|---|
@@ -401,6 +407,12 @@ docs/
 ```bash
 python -m venv .venv && .venv/bin/pip install -e ".[dev]"
 docker compose up -d db
+
+# .env sets POSTGRES_HOST=db, the service name on the Compose network. Running
+# from your host instead means overriding it for the shell.
+set -a; source .env; set +a
+export POSTGRES_HOST=localhost
+
 .venv/bin/python -m biovault.db.bootstrap
 .venv/bin/python -m pytest tests/ -q
 .venv/bin/ruff check src/ tests/
