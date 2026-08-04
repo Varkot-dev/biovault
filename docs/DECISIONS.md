@@ -910,6 +910,97 @@ happened to be right for different reasons.
 
 ---
 
+## D47 — Ledger writes commit independently of the query (critical bug fix)
+
+**The bug.** `charge()` flushed but did not commit; the enclosing session
+committed only after the query returned and rolled back on any exception. The
+debit and the disclosure shared a transaction and failed together — while the
+rows had already been read off disk.
+
+**Measured.** 30 deliberately-aborted queries, 90 site reads across three labs,
+both ledgers at exactly `0.0`. The `budget.py` docstring claimed "debiting
+first means the failure mode is a paid-for answer the analyst never received."
+The behaviour was the exact inverse.
+
+Needed no attacker: a statement timeout, connection reset, or client disconnect
+unwinds identically.
+
+**The general lesson.** A privacy ledger and a data transaction have **opposite
+atomicity requirements**. The ledger must survive the failure of the thing it
+pays for; a data write must not. They cannot share a transaction. Added
+`ledger_session()`, which commits on its own connection before any reading.
+
+**Verified.** The same attack now charges 0.9 across 3 queries and the next 27
+are refused.
+
+---
+
+## D48 — Sensitivity is a property of the query, not a constant
+
+**The bug.** `COUNT_SENSITIVITY = 1.0` was justified as "one person changes any
+count by at most 1", but the query counted **rows**. Nothing constrained a
+subject to one row per gene — verified against the live schema: no uniqueness
+constraint exists, and a second BRCA1 row for an existing specimen inserts
+fine. Compound heterozygosity is the textbook case for BRCA1 and CFTR, both in
+the seed vocabulary.
+
+Delivered privacy degraded to `k·ε` while every ledger recorded `ε`. Same class
+as the per-site undercount (D41), on the sensitivity axis rather than the
+composition axis, and invisible to any test using the seed.
+
+**Fix.** `COUNT(DISTINCT specimen_label)`. `specimen_label` is a *within-tenant*
+identifier, so this needs no cross-tenant linkage and does not touch the
+isolation model. Bounding a subject's exposure *across* labs is the separate,
+architecturally harder problem tracked as issue #2.
+
+---
+
+## D49 — The planner must describe the mechanism
+
+**The bug.** `/federation/precision` computed tolerance from `1/ε` while the
+mechanism used `1/(ε · count_share)`. They were computed independently and
+diverged the instant the epsilon split landed. Live: the planner advertised
+±51.89 while a real query on identical parameters returned ±103.78. An analyst
+sizing a study against a nominal 95% interval got roughly 75% real coverage.
+
+**Fix.** `count_noise_scale()` is now the single place that knows the split;
+`epsilon_to_tolerance` and the endpoint both derive from it. Invariants assert
+planner and mechanism agree at every epsilon.
+
+---
+
+## D50 — What actually changed about the method
+
+Six critical or high defects came out of one adversarial sweep — more than
+every prior review combined. What made the difference was not more reviewers
+but **assigning each a different lens**:
+
+| Lens | What it found |
+|---|---|
+| Attack the *design*, not the code | Unit of privacy is the tenant, not the patient (#2); sensitivity unenforced (#1) |
+| Attack the *seams* between subsystems | Ledger rollback (#7); missing federated audit trail (#8) |
+| Red team with *legitimate credentials* | Per-lab holdings oracle (#9); `/participants` volume leak (#10) |
+| *Falsify* every published number | Headline attacker figure wrong; precision endpoint 2× off; suite flaky |
+
+Reviewers sharing a lens find the same bug repeatedly. The falsification lens
+mattered most and is the one usually skipped — it treats the project's own
+measurements as claims to disprove rather than as evidence.
+
+Two structural changes came out of it, both aimed at the bug *class* rather
+than its instances:
+
+**Conservation invariants** (`test_privacy_invariants.py`) encode relationships,
+not values — ε in equals ε out, planner agrees with mechanism, more sites never
+narrows an interval. Changing a parameter leaves them passing; breaking the
+accounting does not. Verified by injecting all three historical bugs.
+
+**Guards proven to fail first.** Every guard added here was checked against the
+defect it describes before being committed. A guard never observed failing is
+not known to work — a lesson from the `.replace()` that silently no-opped and
+left a stale figure in the demo.
+
+---
+
 ## Final measured state
 
 Clean database (`docker compose down -v`, rebuild, re-bootstrap), full run:
