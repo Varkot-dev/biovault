@@ -16,6 +16,11 @@ from biovault.config import get_settings
 from biovault.crypto.envelope import EnvelopeCipher
 from biovault.db.rls import apply_rls_policies, set_app_role_password
 from biovault.db.session import owner_engine
+
+# Imported for the side effect of registering the consortium tables on
+# Base.metadata. Without this, create_all skips them and applying RLS fails on
+# a table that was never created -- which is exactly how this was caught.
+from biovault.models import consortium as _consortium  # noqa: F401
 from biovault.models.tables import (
     Base,
     Dataset,
@@ -121,6 +126,7 @@ def _seed(settings) -> None:  # noqa: ANN001 - Settings, avoided for import cycl
                             tenant_id=spec.tenant_id,
                             dataset_id=dataset_spec.dataset_id,
                             specimen_label=record.specimen_label,
+                            gene_symbol=record.gene_symbol,
                             contains_phi=record.contains_phi,
                             payload_ciphertext=blob.to_storage(),
                         )
@@ -128,6 +134,19 @@ def _seed(settings) -> None:  # noqa: ANN001 - Settings, avoided for import cycl
 
         # Users and datasets must exist before grants reference both.
         session.flush()
+
+        # Opt the synthetic labs into the consortium. Absence of a row means
+        # non-participation, so without this the seeded federation demo returns
+        # nothing -- which is the correct default (consent is explicit), but
+        # makes for a fixture that cannot demonstrate the feature.
+        for spec in SYNTHETIC_TENANTS:
+            session.add(
+                _consortium.ConsortiumParticipation(
+                    tenant_id=spec.tenant_id,
+                    participating=True,
+                    decided_by=f"{spec.tenant_id}-admin",
+                )
+            )
 
         for spec in SYNTHETIC_TENANTS:
             for grant in spec.grants:

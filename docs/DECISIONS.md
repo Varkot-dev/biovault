@@ -777,6 +777,99 @@ a second, less-noisy view of the data.
 
 ---
 
+## D43 — The suppression flag was a free, noiseless oracle (bug fix)
+
+**The bug.** `privatize_count` compared the **true** count to the threshold. An
+earlier comment defended this as the safe choice, reasoning that deciding on a
+noised value would let an attacker infer which side of the threshold the truth
+fell on. That was backwards, and it was the most serious hole in the module.
+
+Comparing the true count makes `suppressed` a deterministic function of private
+data — an exact bit of `count > 5`, published per site on every query, costing
+nothing. Measured on the old code:
+
+```
+true=3 -> ALWAYS True     true=6  -> ALWAYS False
+true=5 -> ALWAYS True     true=20 -> ALWAYS False
+```
+
+Invariant across 500 draws at every count. Vary the query predicate to
+binary-search the boundary and an attacker recovers exact small counts at a
+named lab — the differencing attack this module exists to stop, one free bit at
+a time.
+
+**Fix.** Compare a *noised* count instead, so the decision is itself a DP
+release. The budget now splits between the threshold test and the count. The
+5-versus-6 distinguishability gap fell from **1.000 to 0.014**.
+
+**The split was tuned by measurement, and the first attempt was wrong.** A
+draft used 0.25 with a comment claiming under 1% spurious suppression at
+true=20; measurement said 35.6%. The final table:
+
+```
+fraction   count scale   suppressed@50   gap 5v6
+  0.25         13.3          15.1%        0.010
+  0.50         20.0           5.0%        0.021
+  0.75         40.0           1.5%        0.050
+```
+
+0.50 balances both costs. Privacy barely varies across the range; utility
+varies a lot, in two opposing directions.
+
+**The 2x count-noise penalty is real and is the price.** The old code produced
+a sharp count *and* a sharp flag because the flag was free — paid for by
+leaking. Once the flag pays its own way, one budget covers two releases. There
+was never a version where both were sharp and the guarantee held.
+
+---
+
+## D44 — Federated queries now match a real gene, not a specimen-ID substring
+
+**The gap.** The query parameter was `variant_prefix` and the README promised
+"how many patients carry this variant?", but the filter was a substring LIKE on
+`specimen_label` — which holds `SPEC-{dataset}-{index}` and no variant
+information whatsoever. The advertised capability did not exist.
+
+**Fix.** `GenomicRecord.gene_symbol`, an indexed plaintext column. A gene symbol
+is public knowledge and non-identifying alone; the identifying remainder of the
+call (position, genotype, depth) stays encrypted and is never decrypted in the
+federated path. Queries match on exact equality against a controlled
+vocabulary, not LIKE — substring matching lets a caller narrow a predicate
+character by character until it isolates one record, which is the setup for a
+differencing attack.
+
+**Seed rescaled.** Cohorts held at most three records per gene against a
+threshold of five, so every cell suppressed correctly but uninformatively. Now
+62–84 carriers per lab per gene.
+
+---
+
+## D45 — Consortium participation is opt-in, with an inbound extraction ceiling
+
+**The gap.** Any lab in `tenants` was silently enrolled as a data source. The
+README frames federation as the consent-compatible alternative to shipping
+genomes; being enrolled by existing is the opposite.
+
+Worse, nothing bounded extraction *from* a lab. The budget is charged to the
+querier, so with N labs each holding an independent budget, total leakage
+against any one lab scales with N and went untracked.
+
+**Fix.** `consortium_participation` (absence means non-participating, so the
+default is exclusion) and `inbound_epsilon_entries`, an append-only ledger
+scoped to the lab being *queried*. Withdrawal is an UPDATE, not a DELETE — a
+deleted row cannot be distinguished from a lab that never joined, losing
+exactly the fact an ethics audit needs.
+
+**Found while wiring it live: RLS hid the roster from itself.** Enumerating
+participants inherently spans tenants, so a querier bound to its own tenant saw
+only its own consent row and concluded it was the sole participant —
+`sites=0/1` on a three-lab consortium, silently reducing federation to a
+self-query. Fixed with a narrow SELECT-only policy, the same shape as the
+pre-auth identity exception. Writes stay tenant-scoped, so no lab can opt
+another in or forge a withdrawal.
+
+---
+
 ## Final measured state
 
 Clean database (`docker compose down -v`, rebuild, re-bootstrap), full run:

@@ -16,6 +16,7 @@ from biovault.federation.privacy import (
     MAX_EPSILON,
     MIN_COHORT_SIZE,
     MIN_EPSILON,
+    THRESHOLD_EPSILON_FRACTION,
     NoisyCount,
     PrivacyError,
     combine_federated_counts,
@@ -53,10 +54,18 @@ def test_smaller_epsilon_produces_more_noise() -> None:
     assert statistics.pstdev(loose) > statistics.pstdev(tight) * 3
 
 
-def test_noise_scale_is_inverse_to_epsilon() -> None:
-    """Scale = sensitivity/epsilon, the Laplace mechanism's definition."""
-    assert privatize_count(100, epsilon=0.1).noise_scale == pytest.approx(10.0)
-    assert privatize_count(100, epsilon=1.0).noise_scale == pytest.approx(1.0)
+def test_noise_scale_is_inverse_to_the_count_share_of_epsilon() -> None:
+    """Scale = sensitivity / (epsilon * count share).
+
+    The count does not get the whole budget: the suppression decision is a
+    release of its own and is paid for out of the same epsilon. So the scale
+    is set by the *remaining* share, not by epsilon directly. At the default
+    50/50 split the count sees half the budget and therefore twice the noise
+    a whole-budget count would have.
+    """
+    share = 1.0 - THRESHOLD_EPSILON_FRACTION
+    assert privatize_count(100, epsilon=0.1).noise_scale == pytest.approx(1.0 / (0.1 * share))
+    assert privatize_count(100, epsilon=1.0).noise_scale == pytest.approx(1.0 / (1.0 * share))
 
 
 # --- The differencing attack ------------------------------------------------
@@ -133,37 +142,77 @@ def test_averaging_defeats_noise_when_queries_are_unlimited() -> None:
 # --- Small-cohort suppression -----------------------------------------------
 
 
-@pytest.mark.parametrize("count", list(range(MIN_COHORT_SIZE + 1)))
-def test_small_cohorts_are_suppressed(count: int) -> None:
-    """Noise cannot hide the difference between nobody and somebody.
+@pytest.mark.parametrize("count", list(range(MIN_COHORT_SIZE)))
+def test_small_cohorts_are_usually_suppressed(count: int) -> None:
+    """Counts below the threshold suppress most of the time.
 
-    When the true count is 0-5 the attacker often already knows it is small,
-    and a noised value still discloses roughly where it sits. Suppression is
-    the only safe answer.
+    "Most", not "always": a deterministic rule would make the flag an exact
+    predicate on private data. See `test_suppression_flag_is_not_an_oracle`.
+
+    The threshold value itself is excluded from this parametrization on
+    purpose. At exactly the boundary the decision is near a coin flip, and it
+    has to be — that indistinguishability between `count == threshold` and
+    `count == threshold + 1` is the whole property being bought. Asserting a
+    majority there would be asserting the leak back into existence.
     """
-    result = privatize_count(count, epsilon=0.5)
-    assert result.suppressed is True
-    assert result.value is None
+    rate = sum(
+        1 for _ in range(400) if privatize_count(count, epsilon=0.5).suppressed
+    ) / 400
+    assert rate > 0.5, f"true count {count} suppressed only {rate:.0%} of the time"
 
 
-def test_cohorts_above_the_threshold_are_answered() -> None:
-    result = privatize_count(MIN_COHORT_SIZE + 1, epsilon=0.5)
-    assert result.suppressed is False
-    assert result.value is not None
+def test_large_cohorts_are_usually_answered() -> None:
+    """Utility: a cohort far above the threshold should rarely be withheld.
 
-
-def test_suppression_is_decided_on_the_true_count_not_the_noised_one() -> None:
-    """Ordering matters, and getting it backwards leaks.
-
-    If suppression were decided after noising, whether suppression fired would
-    itself be evidence about the true value. Deciding on the truth means the
-    signal carries only "true count <= threshold", the intended disclosure.
-
-    A large true count must therefore never be suppressed, however unlucky
-    the noise draw.
+    Spurious suppression of large, safe cohorts is a real cost of the noisy
+    threshold, so it is bounded here rather than left unmeasured.
     """
-    for _ in range(500):
-        assert privatize_count(10_000, epsilon=0.01).suppressed is False
+    rate = sum(
+        1 for _ in range(400) if privatize_count(500, epsilon=0.5).suppressed
+    ) / 400
+    assert rate < 0.05, f"large cohort suppressed {rate:.0%} of the time"
+
+
+def test_suppression_flag_is_not_an_oracle() -> None:
+    """The flag must not reveal which side of the threshold the truth sits on.
+
+    THIS IS THE TEST THAT MATTERS. Suppression is published per site on every
+    query and costs the caller nothing extra. If it were computed from the true
+    count it would be an exact, noiseless bit of `count > threshold` — and
+    varying the query predicate to binary-search the boundary recovers exact
+    small counts at a named lab. That is the differencing attack this module
+    exists to stop, arriving one free bit at a time.
+
+    An earlier version compared the TRUE count and was measured at a perfect
+    1.000 gap: invariant across 500 draws at every count tested. Comparing a
+    noised count instead makes the decision a DP release in its own right.
+    """
+    trials = 4000
+    just_below = sum(
+        1 for _ in range(trials)
+        if privatize_count(MIN_COHORT_SIZE, epsilon=0.1).suppressed
+    ) / trials
+    just_above = sum(
+        1 for _ in range(trials)
+        if privatize_count(MIN_COHORT_SIZE + 1, epsilon=0.1).suppressed
+    ) / trials
+
+    assert abs(just_below - just_above) < 0.15, (
+        f"suppression distinguishes {MIN_COHORT_SIZE} from {MIN_COHORT_SIZE + 1} "
+        f"with gap {abs(just_below - just_above):.3f}; the flag is an oracle"
+    )
+
+
+def test_suppression_of_a_single_count_is_randomized() -> None:
+    """The same true count must not always produce the same flag.
+
+    A deterministic outcome at any count is the signature of the old bug.
+    """
+    outcomes = {
+        privatize_count(MIN_COHORT_SIZE, epsilon=0.1).suppressed
+        for _ in range(200)
+    }
+    assert outcomes == {True, False}, "suppression is deterministic at the boundary"
 
 
 def test_suppressed_result_still_reports_epsilon_spent() -> None:
@@ -171,10 +220,14 @@ def test_suppressed_result_still_reports_epsilon_spent() -> None:
 
     If it did, an attacker could probe for small cohorts for free — and
     learning *which* strata are small is itself a disclosure.
+
+    Suppression is now randomized, so a single tiny count is not guaranteed to
+    suppress. The invariant under test is the accounting: whichever branch is
+    taken, the full epsilon is reported as spent.
     """
-    result = privatize_count(1, epsilon=0.3)
-    assert result.suppressed is True
-    assert result.epsilon_spent == pytest.approx(0.3)
+    for _ in range(50):
+        result = privatize_count(1, epsilon=0.3)
+        assert result.epsilon_spent == pytest.approx(0.3)
 
 
 # --- Parameter validation ---------------------------------------------------
@@ -215,8 +268,11 @@ def test_noised_output_is_never_negative() -> None:
     Clamping is post-processing of a DP result, which never weakens the
     guarantee.
     """
-    values = [privatize_count(6, epsilon=MIN_EPSILON).value for _ in range(500)]
-    assert all(v >= 0 for v in values)
+    values = [
+        privatize_count(6, epsilon=MIN_EPSILON).value for _ in range(500)
+    ]
+    # Suppressed results carry value=None, which is not a negative count.
+    assert all(v is None or v >= 0 for v in values)
 
 
 # --- Federated combination --------------------------------------------------

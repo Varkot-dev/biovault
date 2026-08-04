@@ -41,17 +41,17 @@ row-level security as a second, independent isolation layer.
 ```bash
 curl -X POST localhost:8000/federation/cohort-count \
   -H "Authorization: Bearer $TOKEN" \
-  -d '{"variant_prefix": "SPEC", "epsilon": 0.1}'
+  -d '{"gene": "BRCA1", "epsilon": 0.1}'
 ```
 
 ```json
 {
-  "total": 12,
-  "interval": { "lower": 0, "upper": 55, "tolerance": 42.4, "confidence": 0.95 },
+  "total": 150,
+  "interval": { "lower": 65, "upper": 235, "tolerance": 84.7, "confidence": 0.95 },
   "sites_queried": 3,
   "sites_contributing": 2,
-  "epsilon_spent": 0.1,
-  "epsilon_remaining": 0.8,
+  "epsilon_spent": 0.3,
+  "epsilon_remaining": 0.7,
   "contributions": [
     {"tenant_id": "lab-broad",  "suppressed": false},
     {"tenant_id": "lab-riken",  "suppressed": false},
@@ -60,12 +60,23 @@ curl -X POST localhost:8000/federation/cohort-count \
 }
 ```
 
+The true total across the three labs is 226; the interval covers it. Sanger is
+suppressed here: small cohorts are withheld, because noise cannot hide the
+difference between *nobody* and *somebody*. That decision is itself randomized
+— comparing the true count to the threshold would publish an exact bit of
+`count > 5` per lab per query, free of charge, which is a differencing attack
+delivered one bit at a time. No record, identifier, or exact per-site count appears anywhere in
+that response — asserted by
+`test_response_contains_no_record_level_data`, which scans the raw body for
+known specimen labels, dataset ids, and payload content.
+
 ### The answer is an interval, not a number
 
 `total` is never returned alone. A bare noised count invites an analyst to
-treat it as exact and publish a finding that isn't there. At ε = 0.1 the noise
-scale is 10, so the honest 95% interval is **±30** — a returned count of `12`
-means the truth is somewhere in `0–55`.
+treat it as exact and publish a finding that isn't there. In the response
+above, a total of `150` carries a 95% interval of `65–235` — and the true
+answer is 226. Reporting `150` on its own would have been a fabricated finding;
+reporting the interval is honest about what a private query can tell you.
 
 The interval derives from `accuracy = -scale · ln(α)` (the Laplace tail bound,
 matching OpenDP's `laplacian_scale_to_accuracy`). Measured coverage lands
@@ -82,7 +93,7 @@ Analysts can size a study *before* spending anything:
 ```bash
 curl "localhost:8000/federation/precision?epsilon=0.1&sites=3"
 # {"single_site_tolerance": 29.96, "federated_tolerance": 51.89,
-#  "queries_affordable": 10, "confidence": 0.95}
+#  "queries_affordable": 3, "confidence": 0.95}
 ```
 
 | ε | 95% tolerance | federated queries affordable (3 sites) |
@@ -98,12 +109,7 @@ precision and privacy trade directly against each other, the budget caps how
 many times you can make the trade, and at high ε a single query exhausts
 everything. A system that let you have both would be lying about one of them.
 
-Sanger is suppressed automatically: its matching cohort was at or below the
-minimum size, where noise cannot hide the difference between *nobody* and
-*somebody*. No record, identifier, or exact per-site count appears anywhere in
-that response — asserted by
-`test_response_contains_no_record_level_data`, which scans the raw body for
-known specimen labels, dataset ids, and payload content.
+
 
 ### Why the budget matters more than the noise
 

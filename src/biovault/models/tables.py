@@ -125,12 +125,42 @@ class GenomicRecord(Base):
     `payload_ciphertext` holds a serialized `EncryptedBlob`. Nothing readable
     is stored in the clear beyond the non-sensitive identifiers needed to
     index and authorize.
+
+    ## Why `gene_symbol` is plaintext and the rest of the call is not
+
+    A variant call has several parts, and they are not equally sensitive. The
+    full call — position, genotype, read depth, e.g.
+    `BRCA1:c.0000A>T:GT=0/1:DP=42` — is the record. Genotype at a specific
+    position is individually identifying: a few dozen such calls fingerprint a
+    person and re-identify them against any reference panel. That stays inside
+    `payload_ciphertext`.
+
+    The *gene symbol* alone is a different object. `BRCA1` names a locus that
+    every human being has. It is a public identifier from a controlled
+    vocabulary of a few tens of thousands of entries, it carries no position,
+    no allele, and no genotype, and it distinguishes nobody from anybody: the
+    statement "this specimen has a call in BRCA1" is true of any specimen from
+    a panel that sequences BRCA1. Storing it in the clear therefore discloses
+    which locus was examined, not what was found there.
+
+    That distinction is what makes the federated capability possible. A
+    cross-lab count has to filter on *something*, and the alternative is
+    decrypting another lab's payloads inside the aggregation path — which would
+    require plaintext access to data the whole system exists to keep
+    inaccessible. Promoting only the non-identifying component to a queryable
+    column keeps the federated path free of any decryption at all.
+
+    The column is indexed because it is the federated query's only predicate,
+    and it is deliberately the *only* part of the call that is promoted.
+    Adding position or genotype here would recreate the identifying tuple in
+    plaintext and undo the reasoning above.
     """
 
     __tablename__ = "genomic_records"
     __table_args__ = (
         Index("ix_genomic_records_tenant", "tenant_id"),
         Index("ix_genomic_records_dataset", "dataset_id"),
+        Index("ix_genomic_records_gene", "gene_symbol"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=_uuid)
@@ -141,6 +171,7 @@ class GenomicRecord(Base):
         String(64), ForeignKey("datasets.id", ondelete="CASCADE"), nullable=False
     )
     specimen_label: Mapped[str] = mapped_column(String(120), nullable=False)
+    gene_symbol: Mapped[str] = mapped_column(String(40), nullable=False, default="")
     contains_phi: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     payload_ciphertext: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

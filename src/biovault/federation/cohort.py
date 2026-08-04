@@ -45,14 +45,21 @@ from biovault.federation.accuracy import (
     interval_for,
 )
 from biovault.federation.budget import DEFAULT_TOTAL_EPSILON, charge, remaining_epsilon
+from biovault.federation.consent import (
+    InboundBudgetExhausted,
+    SiteNotParticipating,
+    participating_sites,
+    record_extraction,
+)
 from biovault.federation.privacy import (
     MAX_EPSILON,
     MIN_EPSILON,
     NoisyCount,
+    PrivacyError,
     combine_federated_counts,
     privatize_count,
 )
-from biovault.models.tables import GenomicRecord, Tenant
+from biovault.models.tables import GenomicRecord
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +77,14 @@ class CohortQuery(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    variant_prefix: str = Field(min_length=2, max_length=40)
+    # The gene symbol whose carriers are being counted, e.g. "BRCA1". Matched
+    # for exact equality against `GenomicRecord.gene_symbol`, not as a prefix
+    # or substring: gene symbols are a controlled vocabulary, so an exact match
+    # is what the question actually means. It is also the safer predicate --
+    # substring matching lets a caller shrink a filter step by step until it
+    # selects a single record, and progressively narrowing a cohort is the
+    # setup for a differencing attack.
+    gene: str = Field(min_length=2, max_length=40)
     epsilon: float = Field(default=DEFAULT_EPSILON, ge=MIN_EPSILON, le=MAX_EPSILON)
     # Significance level for the returned interval. Does not affect the noise
     # or the budget -- it only changes how the same uncertainty is reported,
@@ -83,8 +97,8 @@ class CohortQuery(BaseModel):
         Recorded on every budget debit so a run of identical fingerprints —
         the signature of an averaging attack — is visible to an auditor.
 
-        **The hash is deliberately narrow: it covers `variant_prefix` and
-        nothing else.** Only the predicate identifies *what was asked*.
+        **The hash is deliberately narrow: it covers `gene` and nothing
+        else.** Only the predicate identifies *what was asked*.
         `epsilon` and `alpha` control how precisely the answer is reported, not
         which individuals it concerns, so varying them must not produce a new
         fingerprint.
@@ -97,9 +111,7 @@ class CohortQuery(BaseModel):
         this hash, ask whether two queries differing only in that field are
         asking about the same people. If they are, leave it out.
         """
-        return hashlib.sha256(
-            f"variant_prefix={self.variant_prefix}".encode()
-        ).hexdigest()
+        return hashlib.sha256(f"gene={self.gene}".encode()).hexdigest()
 
 
 class SiteContribution(BaseModel):
@@ -138,27 +150,36 @@ class FederatedCohortResult(BaseModel):
     contributions: list[SiteContribution]
 
 
-def _count_matching_records(session: Session, *, tenant_id: str, variant_prefix: str) -> int:
-    """Count matching records within one tenant.
+def _count_matching_records(session: Session, *, tenant_id: str, gene: str) -> int:
+    """Count records carrying a call in `gene` within one tenant.
 
     The session is bound to `tenant_id` first, so RLS restricts the scan to
     that tenant's rows. Even if the WHERE clause were wrong, the policy would
     prevent this from reading another lab's data — the same defense-in-depth
     property the rest of the system relies on.
 
-    Matching is on `specimen_label`, which is non-sensitive metadata. The
-    genomic payload itself stays encrypted and is never decrypted here: a
-    federated count must not require plaintext access to another lab's data.
+    Matching is on `GenomicRecord.gene_symbol`, a plaintext column holding only
+    the non-identifying gene name; see that model for why that one component of
+    a variant call is safe to store in the clear. The full call — position,
+    genotype, depth — stays inside `payload_ciphertext` and is **never
+    decrypted here**. That is the load-bearing property of this function: a
+    federated count must not require plaintext access to another lab's data,
+    so if this path ever needs a decrypt, the capability is broken rather than
+    extended.
+
+    Equality, not LIKE. The value is bound as a parameter either way, so this
+    is not about injection — it is about *filter widening*. A LIKE pattern
+    lets a caller pass `%` and match every row, or narrow a filter one
+    character at a time until it isolates an individual. Exact match against a
+    controlled vocabulary admits neither: the predicate either names a real
+    gene or matches nothing.
     """
     set_tenant_context(session.connection(), tenant_id)
 
-    escaped = (
-        variant_prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    )
     return session.execute(
         select(func.count())
         .select_from(GenomicRecord)
-        .where(GenomicRecord.specimen_label.like(f"%{escaped}%", escape="\\"))
+        .where(GenomicRecord.gene_symbol == gene)
     ).scalar_one()
 
 
@@ -188,7 +209,15 @@ def run_federated_cohort_query(
 
         # Sites must be enumerated BEFORE the charge, because the cost depends
         # on how many of them there are.
-        sites = session.execute(select(Tenant.id).order_by(Tenant.id)).scalars().all()
+        #
+        # Only labs that have opted in. Enumerating every row in `tenants`
+        # would enrol a lab as a data source purely by existing, which is the
+        # opposite of the consent-compatible framing this endpoint claims. A
+        # lab with no participation record is treated as not participating, so
+        # the default is exclusion rather than grandfathering.
+        sites = participating_sites(session)
+        if not sites:
+            raise PrivacyError("no sites are participating in federated queries")
 
         # One query produces one Laplace release PER SITE, and the requester
         # observes all of them. Under sequential composition the privacy cost
@@ -226,8 +255,51 @@ def run_federated_cohort_query(
         contributions: list[SiteContribution] = []
 
         for site in sites:
+            # Bind the SOURCE lab before charging its inbound ledger: the
+            # ledger is tenant-scoped, so the row must land under the lab whose
+            # patients bear the disclosure, not the lab that paid.
+            set_tenant_context(session.connection(), site)
+
+            # Charge the source lab's extraction ceiling before reading it.
+            #
+            # The outbound budget alone does not bound this. It is charged to
+            # the querier, so with N participating labs each holding an
+            # independent budget, total leakage against any one lab scales with
+            # N and nothing tracked it. A lab could be drained by the
+            # consortium while its own budget sat untouched. This is the
+            # counterpart that lets a lab bound what is taken *from* it,
+            # regardless of how many others are asking.
+            try:
+                record_extraction(
+                    session,
+                    tenant_id=site,
+                    querying_tenant_id=requesting_tenant,
+                    actor_id=actor_id,
+                    epsilon=query.epsilon,
+                    query_fingerprint=query.fingerprint(),
+                )
+            except (InboundBudgetExhausted, SiteNotParticipating):
+                # A site that cannot or will not answer is skipped, not fatal.
+                # Failing the whole query would let one exhausted lab deny the
+                # consortium, and would also disclose that lab's ledger state
+                # to every querier through the error. It contributes nothing
+                # and is reported as suppressed, which is already an expected
+                # per-site outcome and therefore reveals nothing new.
+                contributions.append(
+                    SiteContribution(tenant_id=site, suppressed=True)
+                )
+                per_site.append(
+                    NoisyCount(
+                        value=None,
+                        suppressed=True,
+                        epsilon_spent=query.epsilon,
+                        noise_scale=1.0 / query.epsilon,
+                    )
+                )
+                continue
+
             true_count = _count_matching_records(
-                session, tenant_id=site, variant_prefix=query.variant_prefix
+                session, tenant_id=site, gene=query.gene
             )
             # Each site privatizes its own count before it leaves the site.
             # The exact value is never held outside this loop iteration.
@@ -236,6 +308,11 @@ def run_federated_cohort_query(
             contributions.append(
                 SiteContribution(tenant_id=site, suppressed=noisy.suppressed)
             )
+
+        # Restore the requester's tenant: the loop rebound the session to each
+        # source lab in turn, and anything after this point (including the
+        # session commit) must not run under the last site's context.
+        set_tenant_context(session.connection(), requesting_tenant)
 
         combined = combine_federated_counts(per_site)
 

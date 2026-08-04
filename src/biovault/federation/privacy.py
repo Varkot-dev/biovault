@@ -59,6 +59,44 @@ MIN_COHORT_SIZE: Final[int] = 5
 MIN_EPSILON: Final[float] = 0.01
 MAX_EPSILON: Final[float] = 1.0
 
+# Fraction of a query's epsilon spent deciding whether to suppress, with the
+# remainder spent on the count itself.
+#
+# The split has to exist because the suppression decision is a release in its
+# own right (see `privatize_count`). Its size is a genuine trade: epsilon spent
+# on the threshold sharpens the suppress/report boundary, and epsilon spent on
+# the count sharpens the answer. Both come out of the same budget.
+#
+# Tuned against BOTH costs, measured at threshold 5 and epsilon 0.1 over 5000
+# draws per cell. Spending more on the threshold reduces spurious suppression
+# of large cohorts but directly inflates the noise on every answer:
+#
+#     fraction   count scale   suppressed@50   suppressed@20   gap 5v6
+#       0.10          11.1          32.1%           44.0%       0.025
+#       0.25          13.3          15.1%           34.4%       0.010
+#       0.50          20.0           5.0%           23.8%       0.021
+#       0.75          40.0           1.5%           16.2%       0.050
+#
+# The `gap` column is the privacy property -- how much an observer learns from
+# the flag when the truth sits either side of the threshold. It is near zero at
+# every split, against 1.000 for the old deterministic test. So privacy is not
+# what varies here; utility is, in two directions that oppose each other.
+#
+# 0.50 is the balance point. At 0.25 a cohort of fifty carries no individual
+# risk and is still suppressed one time in seven -- a useless answer bought for
+# nothing. At 0.75 spurious suppression nearly vanishes but every count carries
+# four times the noise it would have, which makes the answers that do come back
+# unusable. 0.50 halves the suppression of large cohorts relative to 0.25 while
+# holding the count penalty to 2x.
+#
+# THE 2x IS REAL AND IS THE PRICE OF THE FIX. The old code produced both a
+# sharp count and a sharp suppression flag, because the flag was free -- paid
+# for by leaking an exact bit of private data. Once the flag pays its own way,
+# one budget covers two releases and both get noisier. There was never a
+# version where both were sharp and the guarantee held; the earlier one just
+# kept the cost off the ledger.
+THRESHOLD_EPSILON_FRACTION: Final[float] = 0.50
+
 
 class PrivacyError(Exception):
     """Raised when a query cannot be answered within privacy constraints."""
@@ -147,12 +185,36 @@ def privatize_count(
     if true_count < 0:
         raise PrivacyError("count cannot be negative")
 
-    scale = COUNT_SENSITIVITY / epsilon
+    # The budget splits between two releases: the suppression decision and the
+    # count itself. Both touch private data, so both must be paid for.
+    threshold_epsilon = epsilon * THRESHOLD_EPSILON_FRACTION
+    count_epsilon = epsilon - threshold_epsilon
+    scale = COUNT_SENSITIVITY / count_epsilon
 
-    # Suppression is decided on the TRUE count, before noise. Deciding on the
-    # noised value would leak: an attacker could observe whether suppression
-    # triggered and infer which side of the threshold the truth fell on.
-    if true_count <= min_cohort_size:
+    # THE SUPPRESSION DECISION IS ITSELF A DP RELEASE.
+    #
+    # An earlier version compared the TRUE count to the threshold and defended
+    # it as the safe choice -- reasoning that deciding on a noised value would
+    # let an attacker infer which side of the threshold the truth fell on.
+    # That was backwards, and it was the most serious hole in this module.
+    #
+    # Comparing the true count makes `suppressed` a deterministic function of
+    # private data: an exact, noiseless bit of `count > threshold`, published
+    # per site on every query, costing nothing. Measured on the old code, the
+    # flag was invariant across 500 draws at every true count tested -- a
+    # perfect oracle. Vary the query predicate and binary-search the boundary
+    # and an attacker recovers exact small counts at a named lab, which is the
+    # differencing attack this module exists to stop, one free bit at a time.
+    #
+    # Comparing a NOISED count instead makes the decision randomized, so the
+    # bit carries bounded information rather than complete information. Near
+    # the boundary it genuinely flips between calls, which is the point: an
+    # observer cannot distinguish "true count 5" from "true count 6". This is
+    # the shape of propose-test-release.
+    noisy_threshold_test = true_count + _laplace_noise(
+        COUNT_SENSITIVITY / threshold_epsilon
+    )
+    if noisy_threshold_test <= min_cohort_size:
         return NoisyCount(
             value=None, suppressed=True, epsilon_spent=epsilon, noise_scale=scale
         )

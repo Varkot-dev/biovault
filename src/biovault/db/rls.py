@@ -33,12 +33,26 @@ TENANT_SCOPED_TABLES: Final[tuple[str, ...]] = (
     "dataset_grants",
     "audit_entries",
     "privacy_budget_entries",
+    # Scoped to the lab being queried, not the querier. That is what lets a lab
+    # read and enforce its own consent decision and extraction ceiling without
+    # depending on the good behaviour of whoever is asking.
+    "consortium_participation",
+    "inbound_epsilon_entries",
 )
 
-# Audit entries are append-only: the app role may INSERT and SELECT but never
-# UPDATE or DELETE. Enforced by GRANT, so a compromised application cannot
-# rewrite its own trail.
-APPEND_ONLY_TABLES: Final[tuple[str, ...]] = ("audit_entries", "privacy_budget_entries")
+# Append-only tables: the app role may INSERT and SELECT but never UPDATE or
+# DELETE. Enforced by GRANT, so a compromised application cannot rewrite its
+# own trail — or, for the inbound ledger, erase evidence of how much it has
+# already extracted from another lab and thereby reset that lab's ceiling.
+#
+# `consortium_participation` is deliberately NOT append-only. Withdrawing
+# consent must be possible, which requires UPDATE; the row is preserved rather
+# than deleted so the history of the decision survives.
+APPEND_ONLY_TABLES: Final[tuple[str, ...]] = (
+    "audit_entries",
+    "privacy_budget_entries",
+    "inbound_epsilon_entries",
+)
 
 # Tables consulted before a tenant is known. Not tenant-scoped by design:
 # both are keyed by unguessable high-entropy secrets, so there is no
@@ -75,6 +89,10 @@ def apply_rls_policies(connection: Connection, *, app_role: str) -> None:
 
     # Narrow exception permitting pre-authentication identity lookup.
     _install_auth_lookup_policy(connection)
+
+    # Narrow exception permitting the consortium roster to be read across
+    # tenants. SELECT only; writes stay tenant-scoped.
+    _install_participation_roster_policy(connection)
 
     # Auth tables are keyed by unguessable high-entropy values rather than by
     # tenant, so they are not tenant-scoped. Establishing a session requires
@@ -158,6 +176,43 @@ def _install_tenant_policy(connection: Connection, *, table: str) -> None:
             CREATE POLICY {policy} ON {table}
                 USING (tenant_id = {tenant_expr})
                 WITH CHECK (tenant_id = {tenant_expr})
+            """
+        )
+    )
+
+
+def _install_participation_roster_policy(connection: Connection) -> None:
+    """Permit reading which labs have opted in, across tenants.
+
+    Enumerating consortium participants inherently spans the isolation
+    boundary: a querier bound to its own tenant would otherwise see only its
+    own consent row and conclude it was the sole participant. That is not a
+    hypothetical -- it produced `sites=0/1` on a three-lab consortium before
+    this policy existed, silently reducing federation to a self-query.
+
+    The exception is narrow and covers SELECT only. Which labs participate is
+    not a secret between participants: every consortium member knows who else
+    signed the agreement, and a federated result already names the sites that
+    contributed. What each lab *holds* stays protected by the policies on the
+    data tables, which are untouched by this.
+
+    WRITES stay tenant-scoped. The base policy still governs INSERT and UPDATE,
+    so a lab can read the roster but can only alter its own row -- no lab can
+    opt another one in, or forge a withdrawal on another's behalf.
+    """
+    connection.execute(
+        text(
+            "DROP POLICY IF EXISTS consortium_participation_roster "
+            "ON consortium_participation"
+        )
+    )
+    connection.execute(
+        text(
+            """
+            CREATE POLICY consortium_participation_roster
+                ON consortium_participation
+                FOR SELECT
+                USING (true)
             """
         )
     )

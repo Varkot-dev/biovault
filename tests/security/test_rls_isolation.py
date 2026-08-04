@@ -87,8 +87,13 @@ def test_explicit_cross_tenant_query_returns_nothing(
     assert count == 0, f"{home} could see {foreign} rows"
 
 
+# `users` and `consortium_participation` each carry a narrow SELECT exception
+# permitting a cross-tenant read; both are bounded by their own tests
+# (test_auth_lookup_policy.py and test_consortium_roster.py). Every other
+# tenant-scoped table must return nothing without context.
 @pytest.mark.parametrize(
-    "table", [t for t in TENANT_SCOPED_TABLES if t != "users"]
+    "table",
+    [t for t in TENANT_SCOPED_TABLES if t not in ("users", "consortium_participation")],
 )
 def test_no_rows_visible_without_tenant_context(app_connection, clear_tenant, table: str) -> None:
     """Unset tenant context must fail closed.

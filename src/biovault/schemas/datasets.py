@@ -29,11 +29,20 @@ class DatasetSummary(BaseModel):
 
 
 class RecordUpload(BaseModel):
-    """One record submitted for encrypted storage."""
+    """One record submitted for encrypted storage.
+
+    `gene_symbol` is the one component of the variant call stored in the clear,
+    so that federated cohort counts can filter without decrypting anything. It
+    is optional because not every record is a variant call; records without one
+    simply never match a federated gene query. See `models.tables.GenomicRecord`
+    for why a bare gene name is safe unencrypted while the rest of the call is
+    not — callers must not put coordinates or genotypes here.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     specimen_label: str = Field(min_length=1, max_length=120)
+    gene_symbol: str = Field(default="", max_length=40)
     payload: str = Field(min_length=1, max_length=1_000_000)
     contains_phi: bool = False
 

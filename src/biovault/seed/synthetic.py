@@ -30,6 +30,15 @@ class UserSpec(NamedTuple):
 
 
 class DatasetSpec(NamedTuple):
+    """A synthetic dataset.
+
+    `record_count` is sized so that per-gene counts clear MIN_COHORT_SIZE at
+    every lab. Undersized fixtures make the suppression path fire on every
+    query, which hides whether federation works at all -- an earlier version
+    held at most three records per gene against a threshold of five, so every
+    cell was correctly but uninformatively suppressed.
+    """
+
     dataset_id: str
     name: str
     description: str
@@ -53,12 +62,18 @@ class TenantSpec(NamedTuple):
 class SyntheticRecord(NamedTuple):
     record_id: str
     specimen_label: str
+    gene_symbol: str
     payload: str
     contains_phi: bool
 
 
 # Fabricated variant vocabulary. Gene names are public knowledge; the
 # coordinates, genotypes, and depths below are invented.
+#
+# The leading colon-delimited field is the gene symbol, which is the only part
+# of a call stored in the clear -- see `GenomicRecord` for why that split is
+# safe. The remainder (position, genotype, depth) is the identifying part and
+# only ever reaches the database encrypted.
 _VARIANT_VOCAB: Final[tuple[str, ...]] = (
     "BRCA1:c.0000A>T:GT=0/1:DP=42",
     "TP53:c.0000G>C:GT=1/1:DP=37",
@@ -66,6 +81,16 @@ _VARIANT_VOCAB: Final[tuple[str, ...]] = (
     "HBB:c.0000A>G:GT=0/0:DP=61",
     "APOE:c.0000C>T:GT=0/1:DP=48",
 )
+
+
+def gene_symbol_of(variant: str) -> str:
+    """Extract the gene symbol from a variant call string.
+
+    Split on the first colon only: the rest of the call is HGVS-ish notation
+    that contains colons of its own, and taking anything beyond the first field
+    would drag identifying coordinates into the plaintext column.
+    """
+    return variant.split(":", 1)[0]
 
 
 BROAD = TenantSpec(
@@ -78,8 +103,8 @@ BROAD = TenantSpec(
         UserSpec("u-broad-readonly", "readonly@broad.example", Role.READ_ONLY),
     ),
     datasets=(
-        DatasetSpec("ds-broad-cohort-1", "Cardiac cohort A", "Synthetic cardiac panel", 6, 2),
-        DatasetSpec("ds-broad-cohort-2", "Cardiac cohort B", "Synthetic cardiac panel", 4, 0),
+        DatasetSpec("ds-broad-cohort-1", "Cardiac cohort A", "Synthetic cardiac panel", 240, 40),
+        DatasetSpec("ds-broad-cohort-2", "Cardiac cohort B", "Synthetic cardiac panel", 160, 0),
     ),
     grants=(
         GrantSpec("u-broad-research", "ds-broad-cohort-1"),
@@ -98,7 +123,7 @@ SANGER = TenantSpec(
         UserSpec("u-sanger-readonly", "readonly@sanger.example", Role.READ_ONLY),
     ),
     datasets=(
-        DatasetSpec("ds-sanger-onco-1", "Oncology panel", "Synthetic oncology panel", 5, 3),
+        DatasetSpec("ds-sanger-onco-1", "Oncology panel", "Synthetic oncology panel", 310, 60),
     ),
     grants=(GrantSpec("u-sanger-research", "ds-sanger-onco-1"),),
 )
@@ -113,7 +138,7 @@ RIKEN = TenantSpec(
         UserSpec("u-riken-readonly", "readonly@riken.example", Role.READ_ONLY),
     ),
     datasets=(
-        DatasetSpec("ds-riken-pop-1", "Population reference", "Synthetic population set", 7, 0),
+        DatasetSpec("ds-riken-pop-1", "Population reference", "Synthetic population set", 420, 0),
     ),
     grants=(GrantSpec("u-riken-research", "ds-riken-pop-1"),),
 )
@@ -133,6 +158,7 @@ def build_synthetic_records(dataset: DatasetSpec) -> tuple[SyntheticRecord, ...]
             SyntheticRecord(
                 record_id=f"{dataset.dataset_id}-rec-{index:03d}",
                 specimen_label=f"SPEC-{dataset.dataset_id[-4:].upper()}-{index:03d}",
+                gene_symbol=gene_symbol_of(variant),
                 payload=f"{variant};dataset={dataset.dataset_id};idx={index}",
                 contains_phi=index < dataset.phi_record_count,
             )

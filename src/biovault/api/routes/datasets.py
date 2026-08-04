@@ -148,6 +148,7 @@ def upload_records(
                 tenant_id=dataset.tenant_id,
                 dataset_id=dataset.id,
                 specimen_label=record.specimen_label,
+                gene_symbol=record.gene_symbol,
                 contains_phi=record.contains_phi,
                 payload_ciphertext=blob.to_storage(),
             )

@@ -71,7 +71,10 @@ def test_reapplying_policies_does_not_accumulate_duplicates(
     other table must carry exactly one.
     """
     expected = {table: 1 for table in TENANT_SCOPED_TABLES}
-    expected["users"] = 2  # tenant isolation + auth lookup
+    # Two tables carry a deliberate second policy, each a narrow cross-tenant
+    # SELECT exception. Both are bounded by dedicated tests.
+    expected["users"] = 2  # tenant isolation + pre-auth identity lookup
+    expected["consortium_participation"] = 2  # tenant isolation + roster read
 
     apply_rls_policies(owner_conn, app_role=live_settings.app_db_user)
     apply_rls_policies(owner_conn, app_role=live_settings.app_db_user)
@@ -90,13 +93,24 @@ def test_reapplying_policies_does_not_accumulate_duplicates(
         )
 
 
-def test_only_users_carries_an_extra_policy(owner_conn, live_settings) -> None:
+def test_only_known_tables_carry_an_extra_policy(owner_conn, live_settings) -> None:
     """Guards against a future exception being added without scrutiny.
 
     Any second permissive policy on a tenant-scoped table widens access by
-    construction. This test fails if one appears anywhere but `users`, forcing
-    the author to justify it rather than have it merge unnoticed.
+    construction. PostgreSQL ORs permissive policies together, so an extra one
+    can only loosen isolation, never tighten it. This test fails if one appears
+    on any table not on the allowlist below, forcing the author to justify it
+    rather than have it merge unnoticed.
+
+    The two that are allowed:
+      users                     -- pre-auth identity lookup; without it login
+                                   cannot bootstrap, since a user's tenant is
+                                   a property of the user
+      consortium_participation  -- reading the roster of participating labs,
+                                   which inherently spans tenants
+    Both are SELECT-only and both have a dedicated test bounding their reach.
     """
+    allowed = ["consortium_participation", "users"]
     apply_rls_policies(owner_conn, app_role=live_settings.app_db_user)
 
     multi_policy = [
@@ -110,8 +124,9 @@ def test_only_users_carries_an_extra_policy(owner_conn, live_settings) -> None:
         ).scalar_one()
         > 1
     ]
-    assert multi_policy == ["users"], (
-        f"unexpected tables with multiple permissive policies: {multi_policy}"
+    assert sorted(multi_policy) == allowed, (
+        f"unexpected tables with multiple permissive policies: "
+        f"{sorted(set(multi_policy) - set(allowed))}"
     )
 
 
