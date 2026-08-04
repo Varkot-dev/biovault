@@ -1,0 +1,458 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BioVault — What Crosses the Boundary</title>
+<style>
+  :root {
+    --void:#0B0E13; --panel:#12161E; --panel-2:#171C26; --line:#232A36;
+    --readout:#E8EAED; --neutral:#5A6472; --neutral-dim:#3A424F;
+    --signal:#00E5A0; --breach:#FF3B5C; --amber:#FFB020;
+    --mono: ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: light){:root{
+    --void:#F2F4F7;--panel:#FFF;--panel-2:#F7F9FB;--line:#DDE3EA;
+    --readout:#10141B;--neutral:#5A6472;--neutral-dim:#98A2B0;
+    --signal:#00875A;--breach:#D6203F;--amber:#9A6400;}}
+  :root[data-theme="light"]{--void:#F2F4F7;--panel:#FFF;--panel-2:#F7F9FB;--line:#DDE3EA;
+    --readout:#10141B;--neutral:#5A6472;--neutral-dim:#98A2B0;
+    --signal:#00875A;--breach:#D6203F;--amber:#9A6400;}
+  :root[data-theme="dark"]{--void:#0B0E13;--panel:#12161E;--panel-2:#171C26;--line:#232A36;
+    --readout:#E8EAED;--neutral:#5A6472;--neutral-dim:#3A424F;
+    --signal:#00E5A0;--breach:#FF3B5C;--amber:#FFB020;}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--void);color:var(--readout);font-family:var(--mono);
+       font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 24px 96px;
+        display:flex;flex-direction:column;gap:36px}
+
+  .eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+           color:var(--neutral);display:flex;align-items:center;gap:10px}
+  .eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{margin:0;font-size:clamp(28px,5vw,46px);line-height:1.05;
+     letter-spacing:-.03em;font-weight:700;text-wrap:balance}
+  h1 em{font-style:normal;color:var(--signal)}
+  .standfirst{margin:0;max-width:64ch;color:var(--neutral);font-size:15px}
+  .standfirst strong{color:var(--readout);font-weight:600}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:3px}
+  .panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+    padding:12px 16px;border-bottom:1px solid var(--line);font-size:11px;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--neutral)}
+
+  .stage{padding:20px 16px;display:flex;flex-direction:column;gap:0}
+
+  /* labs */
+  .labs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .lab{background:var(--panel-2);border:1px solid var(--line);border-radius:3px;
+       padding:14px;display:flex;flex-direction:column;gap:10px;position:relative;
+       transition:border-color .3s}
+  .lab.reading{border-color:var(--amber)}
+  .lab.done{border-color:var(--signal)}
+  .lab.held{border-color:var(--breach)}
+  .lab-name{font-size:11px;letter-spacing:.1em;color:var(--neutral)}
+  .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .k{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--neutral-dim)}
+  .v{font-size:19px;font-variant-numeric:tabular-nums;font-weight:600}
+  .v.stays{color:var(--breach)}
+  .v.leaves{color:var(--signal)}
+  .v.pending{color:var(--neutral-dim)}
+  .stays-note{font-size:10px;color:var(--breach);letter-spacing:.04em;opacity:0;
+    transition:opacity .4s}
+  .lab.done .stays-note,.lab.held .stays-note{opacity:1}
+
+  /* the boundary */
+  .boundary{position:relative;height:140px;margin:8px 0}
+    .boundary svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
+  .boundary .barrier{stroke:var(--line);stroke-width:1;stroke-dasharray:3 5}
+  .boundary .conduit{stroke:var(--neutral-dim);stroke-width:1;fill:none;opacity:.3}
+  .boundary .trail{stroke:var(--signal);stroke-width:2;fill:none;
+    stroke-dasharray:1000;stroke-dashoffset:1000;
+    animation:flow .9s ease-out forwards}
+  .boundary .trail.arrived{opacity:.5}
+  .boundary .pip{fill:var(--signal);opacity:0;animation:pop .35s ease-out .55s forwards}
+  .boundary .tag{fill:var(--signal);font:600 13px var(--mono);text-anchor:middle;
+    opacity:0;animation:pop .35s ease-out .55s forwards}
+  @keyframes flow{to{stroke-dashoffset:0}}
+  @keyframes pop{to{opacity:1}}
+  .barrier-label{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--neutral);
+    background:var(--panel);padding:2px 10px;border:1px solid var(--line);border-radius:2px;
+    white-space:nowrap;z-index:2}
+
+  /* coordinator */
+  .coord{background:var(--panel-2);border:1px solid var(--line);border-radius:3px;padding:16px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px}
+  .coord .v{font-size:24px;letter-spacing:-.02em}
+  .coord .v.good{color:var(--signal)}
+  .coord .v.warn{color:var(--amber)}
+
+  .actions{display:flex;flex-wrap:wrap;gap:10px;padding:0 16px 18px}
+  button{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    padding:10px 16px;background:transparent;color:var(--readout);
+    border:1px solid var(--neutral-dim);border-radius:2px;cursor:pointer;
+    transition:border-color .12s,color .12s,background .12s}
+  button:hover:not(:disabled){border-color:var(--signal);color:var(--signal)}
+  button:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  button.primary{border-color:var(--signal);color:var(--void);background:var(--signal);font-weight:600}
+  button.primary:hover:not(:disabled){opacity:.85;color:var(--void)}
+
+  .narration{padding:14px 16px;border-left:3px solid var(--neutral-dim);
+    background:var(--panel-2);font-size:13px;min-height:5.4em;
+    display:flex;flex-direction:column;gap:5px}
+  .narration.active{border-left-color:var(--amber)}
+  .narration.settled{border-left-color:var(--signal)}
+  .narration .h{font-weight:700;font-size:14px}
+  .narration.active .h{color:var(--amber)}
+  .narration.settled .h{color:var(--signal)}
+  .narration p{margin:0;color:var(--neutral)}
+  .narration code{color:var(--readout);background:var(--void);padding:1px 5px;border-radius:2px}
+
+  .prose{display:flex;flex-direction:column;gap:13px;max-width:68ch}
+  .prose h2{margin:0;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--neutral)}
+  .prose p{margin:0;color:var(--neutral);font-size:13px}
+  .prose strong{color:var(--readout);font-weight:600}
+  .prose code{color:var(--signal);background:var(--panel);padding:1px 5px;border-radius:2px;font-size:12px}
+  .legend{display:flex;flex-wrap:wrap;gap:18px;font-size:11px;color:var(--neutral);padding:0 16px 14px}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+  footer{font-size:12px;color:var(--neutral-dim);border-top:1px solid var(--line);padding-top:20px}
+  footer a{color:var(--neutral)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  @media (max-width:640px){.labs{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+
+  <header style="display:flex;flex-direction:column;gap:16px">
+    <div class="eyebrow">BioVault · Federated query, one hop at a time</div>
+    <h1>Three labs answer together.<br><em>Nothing identifying crosses.</em></h1>
+    <p class="standfirst">
+      A researcher at Broad asks how many patients across the whole consortium carry a
+      <strong>BRCA1</strong> variant. Each lab counts its own patients and never shows anyone the
+      answer. Watch what stays home and what is allowed to travel — the numbers below are the
+      real ones from the running system.
+    </p>
+  </header>
+
+  <section class="panel">
+    <div class="panel-head"><span>The consortium</span><span id="stage-label">idle</span></div>
+    <div class="stage">
+
+      <div class="labs" id="labs">
+        <div class="lab" data-lab="lab-broad">
+          <span class="lab-name">LAB-BROAD</span>
+          <div class="row"><span class="k">Carriers</span><span class="v stays" data-true>—</span></div>
+          <div class="row"><span class="k">Released</span><span class="v pending" data-out>—</span></div>
+          <span class="stays-note">true count never left this lab</span>
+        </div>
+        <div class="lab" data-lab="lab-riken">
+          <span class="lab-name">LAB-RIKEN</span>
+          <div class="row"><span class="k">Carriers</span><span class="v stays" data-true>—</span></div>
+          <div class="row"><span class="k">Released</span><span class="v pending" data-out>—</span></div>
+          <span class="stays-note">true count never left this lab</span>
+        </div>
+        <div class="lab" data-lab="lab-sanger">
+          <span class="lab-name">LAB-SANGER</span>
+          <div class="row"><span class="k">Carriers</span><span class="v stays" data-true>—</span></div>
+          <div class="row"><span class="k">Released</span><span class="v pending" data-out>—</span></div>
+          <span class="stays-note">true count never left this lab</span>
+        </div>
+      </div>
+
+      <div class="boundary">
+        <svg id="wire" viewBox="0 0 900 140" preserveAspectRatio="none"
+             aria-label="Noised counts crossing the tenant boundary">
+          <line x1="0" y1="70" x2="900" y2="70" class="barrier"/>
+          <g id="conduits"></g>
+          <g id="trails"></g>
+        </svg>
+        <span class="barrier-label">tenant boundary — only noised integers pass</span>
+      </div>
+
+      <div class="coord">
+        <div><span class="k">Federated total</span><span class="v" id="c-total">—</span></div>
+        <div><span class="k">95% interval</span><span class="v" id="c-ci">—</span></div>
+        <div><span class="k">True answer</span><span class="v" id="c-true">—</span></div>
+        <div><span class="k">ε charged</span><span class="v" id="c-eps">—</span></div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><i class="dot" style="background:var(--breach)"></i> stays inside the lab</span>
+      <span><i class="dot" style="background:var(--signal)"></i> crosses the boundary</span>
+      <span><i class="dot" style="background:var(--amber)"></i> reading / in flight</span>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="run">Run the query</button>
+      <button id="again">Run again</button>
+      <button id="reset">Reset</button>
+    </div>
+  </section>
+
+  <section class="narration" id="narr">
+    <span class="h">Ready</span>
+    <p>Press <em>Run the query</em>. Each lab is read in turn, inside its own isolation boundary.</p>
+  </section>
+
+  <section class="prose">
+    <h2>What you are watching</h2>
+    <p>
+      Each lab computes its count <strong>inside its own tenant</strong>, where row-level security
+      restricts the scan to that lab's rows. The true number is shown here only because this is a
+      diagram — in the real system it exists for microseconds inside one database session and is
+      never returned, logged, or transmitted.
+    </p>
+    <p>
+      What crosses the boundary is a single noised integer per lab. That is the entire payload.
+      No record, no identifier, no exact count. Sanger is often withheld entirely: cohorts at or
+      below the threshold are suppressed, because noise cannot hide the difference between
+      <em>nobody</em> and <em>somebody</em>.
+    </p>
+
+    <h2>Why the total is not the sum you expect</h2>
+    <p>
+      The federated answer is deliberately imprecise, and the interval says by how much. A total
+      that landed exactly on the truth every time would mean the noise was doing nothing. The
+      interval is wide because the count receives only half of each query's ε — the suppression
+      decision is a privacy release of its own and pays for itself out of the same budget.
+    </p>
+    <p>
+      Each run costs <code>ε × 3</code>, not <code>ε</code>: one release per lab, and the
+      requester sees all three. At the default budget that buys three queries, ever, per 30-day
+      window. Precision and privacy trade directly against each other and the budget caps how
+      many times you can make the trade.
+    </p>
+  </section>
+
+  <footer>
+    Counts are the real per-lab figures from the running system (Broad 80, RIKEN 84, Sanger 62;
+    true total 226). Noise is Laplace(0, 1/(ε·0.5)) drawn from <code>crypto.getRandomValues</code>,
+    matching the server's use of <code>secrets</code>. Cohort data is synthetic.
+    <a href="https://github.com/Varkot-dev/biovault">Source</a>.
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // Real per-lab counts from the running system.
+  var LABS = [
+    {id:"lab-broad",  truth:80},
+    {id:"lab-riken",  truth:84},
+    {id:"lab-sanger", truth:62}
+  ];
+  var EPS = 0.1, COUNT_SHARE = 0.5, MIN_COHORT = 5, ALPHA = 0.05;
+  var TRUE_TOTAL = LABS.reduce(function(a,l){return a+l.truth;},0);
+
+  var $ = function(id){return document.getElementById(id);};
+  var css = function(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();};
+
+  function cryptoUniform(){
+    var b = new Uint32Array(2); crypto.getRandomValues(b);
+    return ((b[0]>>>5)*67108864 + (b[1]>>>6) + 0.5) / 9007199254740992;
+  }
+  function laplace(scale){
+    var c = cryptoUniform() - 0.5;
+    return -scale * Math.sign(c) * Math.log1p(-2*Math.abs(c));
+  }
+  function countScale(eps){ return 1/(eps*COUNT_SHARE); }
+  function thresholdScale(eps){ return 1/(eps*(1-COUNT_SHARE)); }
+
+  // Mirrors privatize_count: noisy threshold first, then the noised count.
+  function privatize(truth, eps){
+    if (truth + laplace(thresholdScale(eps)) <= MIN_COHORT) return null;
+    return Math.max(0, Math.round(truth + laplace(countScale(eps))));
+  }
+  function tolerance(scale){ return -scale * Math.log(ALPHA); }
+
+  // ---------- the wire (SVG) ----------
+  //
+  // SVG rather than canvas, after canvas cost five failed attempts. The canvas
+  // was absolutely positioned inside a flex column and reported a layout width
+  // of ZERO in some environments, so its backing store stayed at the browser
+  // default while every draw call succeeded into a strip nobody could see. The
+  // surrounding panel looked perfectly correct throughout, which is what made
+  // it so slow to find.
+  //
+  // An SVG with a fixed viewBox has no such dependency: coordinates are its
+  // own, scaling is the browser's problem, and nothing needs measuring. The
+  // lesson generalises -- if a visual depends on measuring layout, it will
+  // break wherever layout differs, and it will break invisibly.
+
+  var VB_W = 900, VB_H = 140;          // viewBox units
+  var LANE = [150, 450, 750];          // one lane per lab, left to right
+  var SINK = { x: VB_W/2, y: VB_H };   // the coordinator
+
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var trailsG = document.getElementById("trails");
+  var conduitsG = document.getElementById("conduits");
+
+  function pathFor(laneX){
+    // Quadratic: lab anchor -> midpoint control -> coordinator.
+    var ctrlX = (laneX + SINK.x) / 2;
+    return "M " + laneX + " 0 Q " + ctrlX + " " + (VB_H*0.55) +
+           " " + SINK.x + " " + SINK.y;
+  }
+
+  function drawConduits(){
+    conduitsG.textContent = "";
+    LANE.forEach(function(x){
+      var el = document.createElementNS(SVGNS, "path");
+      el.setAttribute("d", pathFor(x));
+      el.setAttribute("class", "conduit");
+      conduitsG.appendChild(el);
+    });
+  }
+
+  function clearTrails(){ trailsG.textContent = ""; }
+
+  function sendPacket(laneIndex, label){
+    var x = LANE[laneIndex];
+
+    var path = document.createElementNS(SVGNS, "path");
+    path.setAttribute("d", pathFor(x));
+    path.setAttribute("class", "trail");
+    trailsG.appendChild(path);
+
+    var pip = document.createElementNS(SVGNS, "circle");
+    pip.setAttribute("cx", SINK.x); pip.setAttribute("cy", SINK.y - 4);
+    pip.setAttribute("r", "4"); pip.setAttribute("class", "pip");
+    trailsG.appendChild(pip);
+
+    var tag = document.createElementNS(SVGNS, "text");
+    tag.setAttribute("x", (x + SINK.x)/2); tag.setAttribute("y", VB_H*0.5);
+    tag.setAttribute("class", "tag");
+    tag.textContent = label;
+    trailsG.appendChild(tag);
+
+    setTimeout(function(){ path.classList.add("arrived"); }, 950);
+  }
+
+  // ---------- narration ----------
+  function say(kind, head, body){
+    var n = $("narr");
+    n.className = "narration" + (kind ? " "+kind : "");
+    n.innerHTML = '<span class="h">'+head+'</span><p>'+body+'</p>';
+  }
+
+  // ---------- run ----------
+  var running = false;
+
+  function reset(){
+    clearTrails();
+    LABS.forEach(function(l){
+      var el = document.querySelector('[data-lab="'+l.id+'"]');
+      el.className = "lab";
+      el.querySelector("[data-true]").textContent = "—";
+      el.querySelector("[data-out]").textContent = "—";
+      el.querySelector("[data-out]").className = "v pending";
+    });
+    ["c-total","c-ci","c-true","c-eps"].forEach(function(id){
+      $(id).textContent = "—"; $(id).className = "v";
+    });
+    $("stage-label").textContent = "idle";
+    say("", "Ready", "Press <em>Run the query</em>. Each lab is read in turn, inside its own isolation boundary.");
+  }
+
+  function run(){
+    if (running) return;
+    running = true;
+    $("run").disabled = true; $("again").disabled = true;
+    reset();
+    $("stage-label").textContent = "querying";
+
+    var released = [];
+    var step = 0;
+
+    function nextLab(){
+      if (step >= LABS.length) return finish(released);
+      var lab = LABS[step], el = document.querySelector('[data-lab="'+lab.id+'"]');
+
+      el.classList.add("reading");
+      say("active",
+          "Reading " + lab.id,
+          "The count runs <em>inside</em> this lab's tenant. Row-level security scopes the scan to " +
+          "its own rows, so the query cannot see the other two.");
+
+      setTimeout(function(){
+        el.querySelector("[data-true]").textContent = lab.truth;
+        var out = privatize(lab.truth, EPS);
+        released.push({id:lab.id, value:out});
+
+        el.classList.remove("reading");
+        var outEl = el.querySelector("[data-out]");
+
+        if (out === null){
+          el.classList.add("held");
+          outEl.textContent = "withheld";
+          outEl.className = "v stays";
+          say("active", lab.id + " — suppressed",
+              "The noised count fell at or below the threshold, so nothing is released. " +
+              "Noise cannot hide the difference between <code>nobody</code> and <code>somebody</code>, " +
+              "and the decision is itself randomized so the flag is not an exact bit.");
+        } else {
+          el.classList.add("done");
+          outEl.textContent = out;
+          outEl.className = "v leaves";
+          sendPacket(step, String(out));
+          say("active", lab.id + " — released " + out,
+              "True count <code>" + lab.truth + "</code> stays here. The integer <code>" + out +
+              "</code> is what crosses — that is the entire payload.");
+        }
+        step++;
+        setTimeout(nextLab, out === null ? 900 : 1250);
+      }, 700);
+    }
+
+    function finish(rel){
+      var contributing = rel.filter(function(r){return r.value !== null;});
+      $("c-eps").textContent = (EPS*LABS.length).toFixed(1);
+      $("c-true").textContent = TRUE_TOTAL;
+      $("c-true").className = "v";
+
+      if (contributing.length < 2){
+        $("c-total").textContent = "withheld";
+        $("c-total").className = "v warn";
+        $("c-ci").textContent = "—";
+        say("settled", "Total withheld",
+            "Fewer than two labs contributed. A one-site “federated” total would just be that " +
+            "lab's count, which identifies whose cohort it is — so it is suppressed.");
+      } else {
+        var total = contributing.reduce(function(a,r){return a+r.value;},0);
+        var scale = Math.sqrt(contributing.length) * countScale(EPS);
+        var tol = tolerance(scale);
+        var lo = Math.max(0, Math.floor(total-tol)), hi = Math.ceil(total+tol);
+        $("c-total").textContent = total; $("c-total").className = "v good";
+        $("c-ci").textContent = lo + "–" + hi;
+        var covers = (TRUE_TOTAL >= lo && TRUE_TOTAL <= hi);
+        say("settled",
+            "Answer: " + total + "  (interval " + lo + "–" + hi + ")",
+            "True total is <code>" + TRUE_TOTAL + "</code>, and the interval " +
+            (covers ? "covers it" : "misses it this time — which happens, and is why the interval is published") +
+            ". The point estimate alone would be a fabricated finding; the interval is honest " +
+            "about what a private query can tell you. Cost: <code>ε × 3 = " +
+            (EPS*3).toFixed(1) + "</code>.");
+      }
+      $("stage-label").textContent = "complete";
+      running = false;
+      $("run").disabled = false; $("again").disabled = false;
+    }
+
+    setTimeout(nextLab, 350);
+  }
+
+  $("run").addEventListener("click", run);
+  $("again").addEventListener("click", run);
+  $("reset").addEventListener("click", function(){ if(!running) reset(); });
+
+  // No resize handling needed: the viewBox scales itself.
+
+  drawConduits();
+  reset();
+
+})();
+</script>

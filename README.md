@@ -4,10 +4,14 @@
 
 Three research labs. One aggregate answer. No lab ever sees another's records.
 
-**→ [Break it yourself](https://claude.ai/code/artifact/338d9894-9820-46f7-8833-b14c85b04555)** — an
-interactive demo where *you* are the attacker. Run a real differencing attack
-against the real mechanism, watch the privacy budget cut you off mid-attack,
-and see exactly where the defense fails.
+**→ [See a query run](https://claude.ai/code/artifact/61e39f40-c38e-47f3-8e0e-375f57097bb7)** —
+one hop at a time. Watch each lab's true count stay home while only a noised
+integer crosses the boundary.
+
+**→ [Break it yourself](https://claude.ai/code/artifact/338d9894-9820-46f7-8833-b14c85b04555)** —
+you are the attacker. Run a real differencing attack against the real
+mechanism, watch the privacy budget cut you off mid-attack, and see exactly
+where the defense fails.
 
 ```bash
 git clone https://github.com/Varkot-dev/biovault && cd biovault
