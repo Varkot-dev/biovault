@@ -35,17 +35,30 @@ def client(live_settings) -> TestClient:
 
 
 @pytest.fixture(autouse=True)
-def _fresh_budget(owner_session):
-    """Give each test a clean budget for the tenants it queries.
+def _fresh_budget():
+    """Give each test empty privacy ledgers.
 
-    The ledger is append-only for the application role, so this runs as the
-    schema owner — the only role permitted to delete, which
-    `test_deleting_budget_entries_fails_at_runtime` asserts.
+    TRUNCATE rather than a tenant-filtered DELETE, and no `owner_session`
+    dependency. Both details matter for reliability rather than tidiness.
 
-    Committing on a separate connection matters: the API under test opens its
-    own sessions, so an uncommitted delete would be invisible to it and every
-    test after the first would see an exhausted budget. That is exactly the
-    failure this fixture initially had.
+    The earlier version deleted rows for three named tenants through a fixture
+    that also took `owner_session`. That made the cleanup racy: it competed
+    with any other writer (a parallel test, a slow prior test still
+    committing), and the unused session argument coupled this fixture's
+    ordering to another's. The suite failed roughly one run in eight, and the
+    symptom never pointed at the cause -- an RLS idempotency test would fail
+    with `429 budget exhausted`, or a federation test with `assert 0.0 == 0.3`,
+    or `KeyError: 'suppressed'`, depending on who lost the race.
+
+    Truncating both tables outright is idempotent whatever else has written to
+    them, so the starting state is the same no matter what ran before.
+
+    Runs as the schema owner because the ledgers are append-only for the
+    application role -- `test_deleting_budget_entries_fails_at_runtime` asserts
+    the app role genuinely cannot do this.
+
+    Commits on its own connection: the API under test opens its own sessions,
+    so an uncommitted delete would be invisible to it.
     """
     from sqlalchemy import create_engine
 
@@ -55,18 +68,18 @@ def _fresh_budget(owner_session):
     with engine.begin() as conn:
         # Both ledgers. Outbound bounds what a lab may SPEND; inbound bounds
         # what may be EXTRACTED FROM it. Clearing only the first leaves every
-        # site refusing on its own ceiling after a few tests, which surfaces as
-        # every query returning null rather than as an obvious budget error.
+        # site refusing on its own ceiling, which surfaces as every query
+        # returning null rather than as an obvious budget error.
         conn.execute(
-            text(
-                "DELETE FROM privacy_budget_entries WHERE tenant_id IN "
-                "('lab-broad', 'lab-sanger', 'lab-riken')"
-            )
+            text("TRUNCATE privacy_budget_entries, inbound_epsilon_entries")
         )
+        # Consent state too: a test that withdraws a lab must not leak that
+        # into the next one.
         conn.execute(
             text(
-                "DELETE FROM inbound_epsilon_entries WHERE tenant_id IN "
-                "('lab-broad', 'lab-sanger', 'lab-riken')"
+                "UPDATE consortium_participation "
+                "SET participating = true, inbound_epsilon_limit = NULL, "
+                "    withdrawn_at = NULL"
             )
         )
     engine.dispose()
