@@ -69,32 +69,38 @@ accept one noisy day.
 
 ## Smaller defects, in priority order
 
-2. **Friday buys are systematically excluded.** `qualifies()` computes lag in
+2. **19 of 126 events have an impossible entry date.** `entry_date()` computes
+   "next session" as the next *calendar* day, so a filing accepted Friday
+   after 15:45 ET gets a Saturday entry date (15% of the log so far, e.g. VMI
+   2026-07-25, the whole BRVE cluster on 2026-08-08). Any grading script that
+   looks up a close on that date finds nothing — or worse, silently
+   misaligns. Roll forward to the next trading day.
+3. **Friday buys are systematically excluded.** `qualifies()` computes lag in
    calendar days with `MAX_LAG_DAYS = 1`. A Friday purchase filed Monday
    (perfectly prompt under the SEC's 2-business-day rule) has lag 3 → rejected.
    ~2/7 of prompt filings never enter the sample, and not at random. Use
    business days.
-3. **Evening acceptance gap.** EDGAR accepts filings until 22:00 ET; the daily
+4. **Evening acceptance gap.** EDGAR accepts filings until 22:00 ET; the daily
    reconcile runs 19:45 ET (and 18:45 ET in winter — the cron is fixed UTC,
    `17 11-22` / `45 23`, so both schedules shift an hour off across DST).
    Filings accepted after the reconcile are only caught if they survive in the
    next morning's 500-deep feed window. Have the daily job also re-reconcile
    day D−1, or run it after 22:00 ET.
-4. **Amendments (4/A) inconsistently handled.** The hourly feed's
+5. **Amendments (4/A) inconsistently handled.** The hourly feed's
    `title.startswith('4')` matches "4/A"; the daily index's
    `startswith('4 ')` doesn't. An amendment with a corrected amount gets a new
    dedup key → duplicate alert for the same economic purchase. Detect `/A`
    and either skip or supersede.
-5. **Foreign-listing rows pollute the log.** e.g. TSM logged from a purchase
+6. **Foreign-listing rows pollute the log.** e.g. TSM logged from a purchase
    of "Common Shares (2330.TW)" at $73.39 — the Taiwan line, not the NYSE ADR
    (which trades ~2.5× higher and represents 5 ordinary shares). Entering the
    ADR at that logged price/size is a category error. Flag or exclude
    non-US-listed security titles.
-6. **Multi-date filings.** A single Form 4 with P transactions on several
+7. **Multi-date filings.** A single Form 4 with P transactions on several
    dates sums them all but keeps only the last date; lag and entry are then
    computed against the wrong date for part of the money. Minor; take the
    max date explicitly or split rows.
-7. **Zero-price footnote transactions are silently dropped** (price given
+8. **Zero-price footnote transactions are silently dropped** (price given
    only in a footnote parses as 0). Fine as a filter, but count them in the
    skip log so coverage is measurable.
 
