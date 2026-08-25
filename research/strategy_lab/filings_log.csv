@@ -1,0 +1,262 @@
+logged_at,source,symbol,company,insider,relationship,security,txn_date,reported,lag_days,shares,price,amount,entry_date,entry_rule
+2026-07-23T22:43:59,daily-2026-07-22,TSM,TAIWAN SEMICONDUCTOR MANUFACTURING CO LTD,Lin Shyue-Shyh,VP,Common Shares (2330.TW),2026-07-21,2026-07-22T06:17:07,1,2000,73.3900,146780,2026-07-22,same-day close
+2026-07-23T22:43:59,daily-2026-07-22,TSM,TAIWAN SEMICONDUCTOR MANUFACTURING CO LTD,Lin Shyue-Shyh,VP,Common Shares (2330.TW),2026-07-21,2026-07-22T06:17:07,1,2000,73.3900,146780,2026-07-22,same-day close
+2026-07-24T00:25:33,hourly,BYRN,Byrna Technologies Inc.,Davis Conn Q.,Chief Executive Officer,Common Stock,2026-07-23,2026-07-23T18:49:38-04:00,0,22198,3.4689,77003,2026-07-24,next session
+2026-07-24T00:25:33,hourly,BYRN,Byrna Technologies Inc.,Davis Conn Q.,Chief Executive Officer,Common Stock,2026-07-23,2026-07-23T18:49:38-04:00,0,22198,3.4689,77003,2026-07-24,next session
+2026-07-24T00:25:33,hourly,BYRN,Byrna Technologies Inc.,Hughes Herbert,Director,Common Stock,2026-07-23,2026-07-23T18:47:22-04:00,0,21681,3.4246,74249,2026-07-24,next session
+2026-07-24T00:25:33,hourly,BYRN,Byrna Technologies Inc.,Hughes Herbert,Director,Common Stock,2026-07-23,2026-07-23T18:47:22-04:00,0,21681,3.4246,74249,2026-07-24,next session
+2026-07-24T00:25:33,hourly,BYRN,Byrna Technologies Inc.,Kennedy TJ,Director,Common Stock,2026-07-22,2026-07-23T18:25:55-04:00,1,29000,3.5271,102286,2026-07-24,next session
+2026-07-24T00:25:33,hourly,BYRN,Byrna Technologies Inc.,Kennedy TJ,Director,Common Stock,2026-07-22,2026-07-23T18:25:55-04:00,1,29000,3.5271,102286,2026-07-24,next session
+2026-07-24T20:50:35,hourly,VMI,VALMONT INDUSTRIES INC,Schwietz John L,Executive VP and CFO,Common Stock,2026-07-23,2026-07-24T16:07:02-04:00,1,208,486.1450,101118,2026-07-25,next session
+2026-07-24T20:50:35,hourly,VMI,VALMONT INDUSTRIES INC,Schwietz John L,Executive VP and CFO,Common Stock,2026-07-23,2026-07-24T16:07:02-04:00,1,208,486.1450,101118,2026-07-25,next session
+2026-07-28T08:03:04,hourly,OVLY,Oak Valley Bancorp,Strong Gary,Director,Common Stock,2026-07-27,2026-07-27T19:03:12-04:00,0,2000,32.5000,65000,2026-07-28,next session
+2026-07-28T08:03:04,hourly,OVLY,Oak Valley Bancorp,Strong Gary,Director,Common Stock,2026-07-27,2026-07-27T19:03:12-04:00,0,2000,32.5000,65000,2026-07-28,next session
+2026-07-28T17:00:13,hourly,KRNY,Kearny Financial Corp.,Fields Curtland E,Director,Common Stock,2026-07-27,2026-07-28T11:16:57-04:00,1,14700,9.4064,138274,2026-07-28,same-day close
+2026-07-28T17:00:13,hourly,KRNY,Kearny Financial Corp.,Fields Curtland E,Director,Common Stock,2026-07-27,2026-07-28T11:16:57-04:00,1,14700,9.4064,138274,2026-07-28,same-day close
+2026-07-28T21:38:59,hourly,CVBF,CVB FINANCIAL CORP,O Brien Raymond V III,Director,Common Stock,2026-07-28,2026-07-28T17:05:55-04:00,0,20000,22.7650,455300,2026-07-29,next session
+2026-07-28T21:38:59,hourly,CVBF,CVB FINANCIAL CORP,O Brien Raymond V III,Director,Common Stock,2026-07-28,2026-07-28T17:05:55-04:00,0,20000,22.7650,455300,2026-07-29,next session
+2026-07-29T08:10:02,hourly,MPLT,"MapLight Therapeutics, Inc.",Cox Troy,Director,Voting Common Stock,2026-07-28,2026-07-28T21:14:42-04:00,0,15620,9.5200,148702,2026-07-29,next session
+2026-07-29T08:10:02,hourly,MPLT,"MapLight Therapeutics, Inc.",Cox Troy,Director,Voting Common Stock,2026-07-28,2026-07-28T21:14:42-04:00,0,15620,9.5200,148702,2026-07-29,next session
+2026-07-29T08:10:02,hourly,ACI,"Albertsons Companies, Inc.",Moriarty Thomas M,"EVP, M&A and Corporate Affairs","Class A common stock, par value $0.01",2026-07-27,2026-07-28T19:29:49-04:00,1,170500,11.5090,1962284,2026-07-29,next session
+2026-07-29T08:10:02,hourly,ACI,"Albertsons Companies, Inc.",Moriarty Thomas M,"EVP, M&A and Corporate Affairs","Class A common stock, par value $0.01",2026-07-27,2026-07-28T19:29:49-04:00,1,170500,11.5090,1962284,2026-07-29,next session
+2026-07-31T20:50:03,hourly,IONS,IONIS PHARMACEUTICALS INC,Hayden Michael R,Director,Common Stock,2026-07-31,2026-07-31T16:42:12-04:00,0,20000,52.9350,1058700,2026-08-01,next session
+2026-07-31T20:50:03,hourly,IONS,IONIS PHARMACEUTICALS INC,Hayden Michael R,Director,Common Stock,2026-07-31,2026-07-31T16:42:12-04:00,0,20000,52.9350,1058700,2026-08-01,next session
+2026-07-31T20:50:03,hourly,LOOP,"Loop Industries, Inc.",GEYGAN JEFFREY RICHART,Director,"Common stock, par value $0.0001 per share",2026-07-30,2026-07-31T16:30:11-04:00,1,69505,0.7479,51982,2026-08-01,next session
+2026-07-31T20:50:03,hourly,LOOP,"Loop Industries, Inc.",GEYGAN JEFFREY RICHART,Director,"Common stock, par value $0.0001 per share",2026-07-30,2026-07-31T16:30:11-04:00,1,69505,0.7479,51982,2026-08-01,next session
+2026-07-31T20:50:03,hourly,DBD,"DIEBOLD NIXDORF, Inc",Timko Thomas S,"EVP, CFO",Common Stock,2026-07-31,2026-07-31T16:21:02-04:00,0,700,72.2898,50603,2026-08-01,next session
+2026-07-31T20:50:03,hourly,DBD,"DIEBOLD NIXDORF, Inc",Timko Thomas S,"EVP, CFO",Common Stock,2026-07-31,2026-07-31T16:21:02-04:00,0,700,72.2898,50603,2026-08-01,next session
+2026-08-03T20:43:19,hourly,HUN,Huntsman CORP,Huntsman Peter R,"Chairman, President  & CEO",Common Stock,2026-08-03,2026-08-03T16:22:44-04:00,0,100000,9.8100,981000,2026-08-04,next session
+2026-08-03T20:43:19,hourly,HUN,Huntsman CORP,Huntsman Peter R,"Chairman, President  & CEO",Common Stock,2026-08-03,2026-08-03T16:22:44-04:00,0,100000,9.8100,981000,2026-08-04,next session
+2026-08-04T13:14:17,hourly,TSM,TAIWAN SEMICONDUCTOR MANUFACTURING CO LTD,Tien Bor-Zen,VP,Common Shares (2330.TW),2026-08-03,2026-08-04T07:01:20-04:00,1,1000,73.0600,73060,2026-08-04,same-day close
+2026-08-04T13:14:17,hourly,TSM,TAIWAN SEMICONDUCTOR MANUFACTURING CO LTD,Tien Bor-Zen,VP,Common Shares (2330.TW),2026-08-03,2026-08-04T07:01:20-04:00,1,1000,73.0600,73060,2026-08-04,same-day close
+2026-08-04T20:02:52,hourly,MKZR,"MacKenzie Realty Capital, Inc.",PATTERSON CHARLES E. II,General Counsel/Secretary,MacKenzie Realty Capital Inc. Common Stock,2026-08-03,2026-08-04T15:37:54-04:00,1,66600,1.3154,87606,2026-08-04,same-day close
+2026-08-04T20:02:52,hourly,MKZR,"MacKenzie Realty Capital, Inc.",PATTERSON CHARLES E. II,General Counsel/Secretary,MacKenzie Realty Capital Inc. Common Stock,2026-08-03,2026-08-04T15:37:54-04:00,1,66600,1.3154,87606,2026-08-04,same-day close
+2026-08-04T20:02:52,hourly,MKZR,"MacKenzie Realty Capital, Inc.",PATTERSON CHARLES E. II,General Counsel/Secretary,MacKenzie Realty Capital Inc. Common Stock,2026-08-03,2026-08-04T15:37:54-04:00,1,66600,1.3154,87606,2026-08-04,same-day close
+2026-08-04T20:02:52,hourly,MKZR,"MacKenzie Realty Capital, Inc.",PATTERSON CHARLES E. II,General Counsel/Secretary,MacKenzie Realty Capital Inc. Common Stock,2026-08-03,2026-08-04T15:37:54-04:00,1,66600,1.3154,87606,2026-08-04,same-day close
+2026-08-05T15:34:41,hourly,CSGP,"COSTAR GROUP, INC.",FLORANCE ANDREW C,Founder and CEO,"Common Stock, par value $0.01 per share",2026-08-04,2026-08-05T09:27:00-04:00,1,83300,29.8900,2489837,2026-08-05,same-day close
+2026-08-05T15:34:41,hourly,CSGP,"COSTAR GROUP, INC.",FLORANCE ANDREW C,Founder and CEO,"Common Stock, par value $0.01 per share",2026-08-04,2026-08-05T09:27:00-04:00,1,83300,29.8900,2489837,2026-08-05,same-day close
+2026-08-05T21:38:42,hourly,GBFH,GBank Financial Holdings Inc.,Nigro Todd Anthony,SECRETARY,Common Stock,2026-08-04,2026-08-05T17:24:03-04:00,1,5000,21.0700,105350,2026-08-06,next session
+2026-08-05T21:38:42,hourly,GBFH,GBank Financial Holdings Inc.,Nigro Todd Anthony,SECRETARY,Common Stock,2026-08-04,2026-08-05T17:24:03-04:00,1,5000,21.0700,105350,2026-08-06,next session
+2026-08-05T21:38:42,hourly,GBFH,GBank Financial Holdings Inc.,Nigro Todd Anthony,SECRETARY,Common Stock,2026-08-04,2026-08-05T17:24:03-04:00,1,5000,21.0700,105350,2026-08-06,next session
+2026-08-05T21:38:42,hourly,GBFH,GBank Financial Holdings Inc.,NIGRO EDWARD MICHAEL,CEO and Executive Chairman,Common Stock,2026-08-04,2026-08-05T17:18:55-04:00,1,9200,21.5057,197852,2026-08-06,next session
+2026-08-05T21:38:42,hourly,GBFH,GBank Financial Holdings Inc.,NIGRO EDWARD MICHAEL,CEO and Executive Chairman,Common Stock,2026-08-04,2026-08-05T17:18:55-04:00,1,9200,21.5057,197852,2026-08-06,next session
+2026-08-05T21:38:42,hourly,GBFH,GBank Financial Holdings Inc.,NIGRO EDWARD MICHAEL,CEO and Executive Chairman,Common Stock,2026-08-04,2026-08-05T17:18:55-04:00,1,9200,21.5057,197852,2026-08-06,next session
+2026-08-05T21:38:42,hourly,GBFH,GBank Financial Holdings Inc.,NIGRO EDWARD MICHAEL,CEO and Executive Chairman,Common Stock,2026-08-04,2026-08-05T17:18:55-04:00,1,9200,21.5057,197852,2026-08-06,next session
+2026-08-05T21:38:42,hourly,GBFH,GBank Financial Holdings Inc.,Herbst Timothy P,Director,Common Stock,2026-08-04,2026-08-05T17:16:33-04:00,1,10000,21.4971,214971,2026-08-06,next session
+2026-08-05T21:38:42,hourly,GBFH,GBank Financial Holdings Inc.,Herbst Timothy P,Director,Common Stock,2026-08-04,2026-08-05T17:16:33-04:00,1,10000,21.4971,214971,2026-08-06,next session
+2026-08-05T21:38:42,hourly,GBFH,GBank Financial Holdings Inc.,NEWGARD JEFFREY K,President/CEO (GBank),Common Stock,2026-08-04,2026-08-05T17:11:29-04:00,1,32263,21.6665,699025,2026-08-06,next session
+2026-08-05T21:38:42,hourly,GBFH,GBank Financial Holdings Inc.,NEWGARD JEFFREY K,President/CEO (GBank),Common Stock,2026-08-04,2026-08-05T17:11:29-04:00,1,32263,21.6665,699025,2026-08-06,next session
+2026-08-05T21:38:42,hourly,INDV,"Indivior Pharmaceuticals, Inc.",Anderson Woodrow D,Chief Accounting Officer,Common Stock,2026-08-05,2026-08-05T16:52:07-04:00,0,1500,36.2800,54420,2026-08-06,next session
+2026-08-05T21:38:42,hourly,INDV,"Indivior Pharmaceuticals, Inc.",Anderson Woodrow D,Chief Accounting Officer,Common Stock,2026-08-05,2026-08-05T16:52:07-04:00,0,1500,36.2800,54420,2026-08-06,next session
+2026-08-05T21:38:42,hourly,TSCO,TRACTOR SUPPLY CO /DE/,MORRIS EDNA,Director,Common stock,2026-08-04,2026-08-05T16:41:02-04:00,1,1560,32.4400,50606,2026-08-06,next session
+2026-08-05T21:38:42,hourly,TSCO,TRACTOR SUPPLY CO /DE/,MORRIS EDNA,Director,Common stock,2026-08-04,2026-08-05T16:41:02-04:00,1,1560,32.4400,50606,2026-08-06,next session
+2026-08-05T21:38:42,hourly,TSCO,TRACTOR SUPPLY CO /DE/,Lawton III Harry A,President & CEO,Common stock,2026-08-04,2026-08-05T16:40:16-04:00,1,15600,32.1489,501524,2026-08-06,next session
+2026-08-05T21:38:42,hourly,TSCO,TRACTOR SUPPLY CO /DE/,Lawton III Harry A,President & CEO,Common stock,2026-08-04,2026-08-05T16:40:16-04:00,1,15600,32.1489,501524,2026-08-06,next session
+2026-08-05T23:27:50,hourly,WCC,WESCO INTERNATIONAL INC,Castillo Daniel J,"EVP & GM, EES",Common Stock,2026-08-04,2026-08-05T17:53:18-04:00,1,960,365.8900,351254,2026-08-06,next session
+2026-08-05T23:27:50,hourly,WCC,WESCO INTERNATIONAL INC,Castillo Daniel J,"EVP & GM, EES",Common Stock,2026-08-04,2026-08-05T17:53:18-04:00,1,960,365.8900,351254,2026-08-06,next session
+2026-08-06T13:06:05,hourly,BBBY,"BED BATH & BEYOND, INC.",LEMONIS MARCUS,EXECUTIVE CHAIRMAN & CEO,Common Stock,2026-08-05,2026-08-06T08:13:36-04:00,1,43382,4.6700,202594,2026-08-06,same-day close
+2026-08-06T13:06:05,hourly,BBBY,"BED BATH & BEYOND, INC.",LEMONIS MARCUS,EXECUTIVE CHAIRMAN & CEO,Common Stock,2026-08-05,2026-08-06T08:13:36-04:00,1,43382,4.6700,202594,2026-08-06,same-day close
+2026-08-06T13:06:05,hourly,TM,TOYOTA MOTOR CORP/,Kon Kenta,President,Common Stock,2026-08-05,2026-08-06T06:03:24-04:00,1,85000,18.4100,1564850,2026-08-06,same-day close
+2026-08-06T13:06:05,hourly,TM,TOYOTA MOTOR CORP/,Kon Kenta,President,Common Stock,2026-08-05,2026-08-06T06:03:24-04:00,1,85000,18.4100,1564850,2026-08-06,same-day close
+2026-08-06T15:35:13,hourly,TLSA,Tiziana Life Sciences Ltd,Elrifi Ivor,Chief Executive Officer,COMMON STOCK,2026-08-05,2026-08-06T09:30:02-04:00,1,321423,0.9922,318909,2026-08-06,same-day close
+2026-08-06T15:35:13,hourly,TLSA,Tiziana Life Sciences Ltd,Elrifi Ivor,Chief Executive Officer,COMMON STOCK,2026-08-05,2026-08-06T09:30:02-04:00,1,321423,0.9922,318909,2026-08-06,same-day close
+2026-08-07T00:20:55,hourly,LUMN,"Lumen Technologies, Inc.",Johnson Kathleen E,Chief Executive Officer,Common Stock,2026-08-06,2026-08-06T18:36:40-04:00,0,100000,6.1268,612680,2026-08-07,next session
+2026-08-07T00:20:55,hourly,LUMN,"Lumen Technologies, Inc.",Johnson Kathleen E,Chief Executive Officer,Common Stock,2026-08-06,2026-08-06T18:36:40-04:00,0,100000,6.1268,612680,2026-08-07,next session
+2026-08-07T00:20:55,hourly,ADAG,Adagene Inc.,Luo Peter,Chief Executive Officer,American Depositary Shares (ADS),2026-08-05,2026-08-06T18:15:54-04:00,1,23245,3.6465,84764,2026-08-07,next session
+2026-08-07T00:20:55,hourly,ADAG,Adagene Inc.,Luo Peter,Chief Executive Officer,American Depositary Shares (ADS),2026-08-05,2026-08-06T18:15:54-04:00,1,23245,3.6465,84764,2026-08-07,next session
+2026-08-07T00:20:55,hourly,ETR,ENTERGY CORP /DE/,Ropp Ralph Lewis,Director,Common Stock,2026-08-06,2026-08-06T18:08:39-04:00,0,1000,106.0750,106075,2026-08-07,next session
+2026-08-07T00:20:55,hourly,ETR,ENTERGY CORP /DE/,Ropp Ralph Lewis,Director,Common Stock,2026-08-06,2026-08-06T18:08:39-04:00,0,1000,106.0750,106075,2026-08-07,next session
+2026-08-07T21:04:53,hourly,BRVE,"Braveheart Bio, Inc.",Rickey James Paul,Chief Financial Officer,Common Stock,2026-08-07,2026-08-07T16:41:40-04:00,0,27777,18.0000,499986,2026-08-08,next session
+2026-08-07T21:04:53,hourly,BRVE,"Braveheart Bio, Inc.",Rickey James Paul,Chief Financial Officer,Common Stock,2026-08-07,2026-08-07T16:41:40-04:00,0,27777,18.0000,499986,2026-08-08,next session
+2026-08-07T21:04:53,hourly,BRVE,"Braveheart Bio, Inc.",Viehbacher Christopher,Director,Common Stock,2026-08-07,2026-08-07T16:31:15-04:00,0,83333,18.0000,1499994,2026-08-08,next session
+2026-08-07T21:04:53,hourly,BRVE,"Braveheart Bio, Inc.",Viehbacher Christopher,Director,Common Stock,2026-08-07,2026-08-07T16:31:15-04:00,0,83333,18.0000,1499994,2026-08-08,next session
+2026-08-07T21:04:53,hourly,BRVE,"Braveheart Bio, Inc.",Malek David I,Director,Common Stock,2026-08-07,2026-08-07T16:31:08-04:00,0,4166,18.0000,74988,2026-08-08,next session
+2026-08-07T21:04:53,hourly,BRVE,"Braveheart Bio, Inc.",Malek David I,Director,Common Stock,2026-08-07,2026-08-07T16:31:08-04:00,0,4166,18.0000,74988,2026-08-08,next session
+2026-08-07T21:04:53,hourly,BRVE,"Braveheart Bio, Inc.",Murdoch Travis,CEO and President,Common Stock,2026-08-07,2026-08-07T16:30:52-04:00,0,83333,18.0000,1499994,2026-08-08,next session
+2026-08-07T21:04:53,hourly,BRVE,"Braveheart Bio, Inc.",Murdoch Travis,CEO and President,Common Stock,2026-08-07,2026-08-07T16:30:52-04:00,0,83333,18.0000,1499994,2026-08-08,next session
+2026-08-07T21:04:53,hourly,BRVE,"Braveheart Bio, Inc.",Lubner David Charles,Director,Common Stock,2026-08-07,2026-08-07T16:30:35-04:00,0,55555,18.0000,999990,2026-08-08,next session
+2026-08-07T21:04:53,hourly,BRVE,"Braveheart Bio, Inc.",Lubner David Charles,Director,Common Stock,2026-08-07,2026-08-07T16:30:35-04:00,0,55555,18.0000,999990,2026-08-08,next session
+2026-08-10T12:05:04,hourly,CCB,COASTAL FINANCIAL CORP,Sprink Eric M,CEO,Common Stock,2026-08-06,2026-08-07T19:35:35-04:00,1,10000,44.4500,444500,2026-08-08,next session
+2026-08-10T12:05:04,hourly,CCB,COASTAL FINANCIAL CORP,Sprink Eric M,CEO,Common Stock,2026-08-06,2026-08-07T19:35:35-04:00,1,10000,44.4500,444500,2026-08-08,next session
+2026-08-10T19:26:31,hourly,MATW,MATTHEWS INTERNATIONAL CORP,SCHAWK DAVID A,Director,Class A Common Stock,2026-08-10,2026-08-10T15:06:59-04:00,0,5000,23.6000,118000,2026-08-10,same-day close
+2026-08-10T19:26:31,hourly,MATW,MATTHEWS INTERNATIONAL CORP,SCHAWK DAVID A,Director,Class A Common Stock,2026-08-10,2026-08-10T15:06:59-04:00,0,5000,23.6000,118000,2026-08-10,same-day close
+2026-08-10T19:26:31,hourly,RRBI,RED RIVER BANCSHARES INC,Price Teddy Ray,Director,Common Stock,2026-08-10,2026-08-10T14:23:25-04:00,0,1119,99.9090,111798,2026-08-10,same-day close
+2026-08-10T19:26:31,hourly,RRBI,RED RIVER BANCSHARES INC,Price Teddy Ray,Director,Common Stock,2026-08-10,2026-08-10T14:23:25-04:00,0,1119,99.9090,111798,2026-08-10,same-day close
+2026-08-10T21:07:11,hourly,CWBC,Community West Bancshares,GILL JAGROOP,Director,CWBC - Common Stock,2026-08-10,2026-08-10T16:33:52-04:00,0,4770,24.8800,118678,2026-08-11,next session
+2026-08-10T21:07:11,hourly,CWBC,Community West Bancshares,GILL JAGROOP,Director,CWBC - Common Stock,2026-08-10,2026-08-10T16:33:52-04:00,0,4770,24.8800,118678,2026-08-11,next session
+2026-08-10T22:04:09,hourly,MKZR,"MacKenzie Realty Capital, Inc.",PATTERSON CHARLES E. II,General Counsel/Secretary,MacKenzie Realty Capital Inc. Common Stock,2026-08-10,2026-08-10T17:52:14-04:00,0,33400,1.5970,53340,2026-08-11,next session
+2026-08-10T22:04:09,hourly,MKZR,"MacKenzie Realty Capital, Inc.",PATTERSON CHARLES E. II,General Counsel/Secretary,MacKenzie Realty Capital Inc. Common Stock,2026-08-10,2026-08-10T17:52:14-04:00,0,33400,1.5970,53340,2026-08-11,next session
+2026-08-10T22:04:09,hourly,MRP,"Millrose Properties, Inc.",Gorson Matthew B.,Director,Class A Common Stock,2026-08-10,2026-08-10T17:31:37-04:00,0,3000,28.8000,86400,2026-08-11,next session
+2026-08-10T22:04:09,hourly,MRP,"Millrose Properties, Inc.",Gorson Matthew B.,Director,Class A Common Stock,2026-08-10,2026-08-10T17:31:37-04:00,0,3000,28.8000,86400,2026-08-11,next session
+2026-08-10T22:04:09,hourly,GLXY,Galaxy Digital Inc.,BANDROWCZAK STEVEN JOHN,Director,Class A Common Stock,2026-08-10,2026-08-10T17:26:17-04:00,0,5100,19.6300,100113,2026-08-11,next session
+2026-08-10T22:04:09,hourly,GLXY,Galaxy Digital Inc.,BANDROWCZAK STEVEN JOHN,Director,Class A Common Stock,2026-08-10,2026-08-10T17:26:17-04:00,0,5100,19.6300,100113,2026-08-11,next session
+2026-08-10T23:01:02,hourly,BLSM,"BlossomHill Therapeutics, Inc.",Schmid John P.,Director,Common Stock,2026-08-10,2026-08-10T18:35:10-04:00,0,6000,16.0000,96000,2026-08-11,next session
+2026-08-10T23:01:02,hourly,BLSM,"BlossomHill Therapeutics, Inc.",Schmid John P.,Director,Common Stock,2026-08-10,2026-08-10T18:35:10-04:00,0,6000,16.0000,96000,2026-08-11,next session
+2026-08-10T23:01:02,hourly,BLSM,"BlossomHill Therapeutics, Inc.",Liptak Vincent Paul,General Counsel,Common Stock,2026-08-10,2026-08-10T18:26:05-04:00,0,4700,15.8936,74700,2026-08-11,next session
+2026-08-10T23:01:02,hourly,BLSM,"BlossomHill Therapeutics, Inc.",Liptak Vincent Paul,General Counsel,Common Stock,2026-08-10,2026-08-10T18:26:05-04:00,0,4700,15.8936,74700,2026-08-11,next session
+2026-08-10T23:01:02,hourly,HUBS,HUBSPOT INC,Dischler Gerald,Director,Common Stock,2026-08-10,2026-08-10T18:07:36-04:00,0,925,215.9300,199735,2026-08-11,next session
+2026-08-10T23:01:02,hourly,HUBS,HUBSPOT INC,Dischler Gerald,Director,Common Stock,2026-08-10,2026-08-10T18:07:36-04:00,0,925,215.9300,199735,2026-08-11,next session
+2026-08-11T17:18:56,hourly,BCML,BayCom Corp,Baron Christopher F,President and CEO,Common Stock,2026-08-10,2026-08-11T12:50:18-04:00,1,8250,30.3900,250718,2026-08-11,same-day close
+2026-08-11T17:18:56,hourly,BCML,BayCom Corp,Baron Christopher F,President and CEO,Common Stock,2026-08-10,2026-08-11T12:50:18-04:00,1,8250,30.3900,250718,2026-08-11,same-day close
+2026-08-11T18:13:26,hourly,GLRE,"GREENLIGHT CAPITAL RE, LTD.",Goldberg Leonard R,Director,ORDINARY SHARES,2026-08-10,2026-08-11T13:32:43-04:00,1,12000,15.5200,186240,2026-08-11,same-day close
+2026-08-11T18:13:26,hourly,GLRE,"GREENLIGHT CAPITAL RE, LTD.",Goldberg Leonard R,Director,ORDINARY SHARES,2026-08-10,2026-08-11T13:32:43-04:00,1,12000,15.5200,186240,2026-08-11,same-day close
+2026-08-11T21:08:59,hourly,STRZ,STARZ ENTERTAINMENT CORP /CN/,Hirsch Jeffrey,President and CEO,Common Shares,2026-08-10,2026-08-11T16:29:38-04:00,1,10000,24.8000,248000,2026-08-12,next session
+2026-08-11T21:08:59,hourly,STRZ,STARZ ENTERTAINMENT CORP /CN/,Hirsch Jeffrey,President and CEO,Common Shares,2026-08-10,2026-08-11T16:29:38-04:00,1,10000,24.8000,248000,2026-08-12,next session
+2026-08-11T21:08:59,hourly,SNEX,StoneX Group Inc.,Thamodaran Dhamu R.,Director,Common Stock,2026-08-10,2026-08-11T16:28:35-04:00,1,2500,64.4824,161206,2026-08-12,next session
+2026-08-11T21:08:59,hourly,SNEX,StoneX Group Inc.,Thamodaran Dhamu R.,Director,Common Stock,2026-08-10,2026-08-11T16:28:35-04:00,1,2500,64.4824,161206,2026-08-12,next session
+2026-08-11T22:10:45,hourly,KMPR,KEMPER Corp,LADERMAN GERALD,Director,Common Stock,2026-08-11,2026-08-11T17:57:47-04:00,0,4000,26.4900,105960,2026-08-12,next session
+2026-08-11T22:10:45,hourly,KMPR,KEMPER Corp,LADERMAN GERALD,Director,Common Stock,2026-08-11,2026-08-11T17:57:47-04:00,0,4000,26.4900,105960,2026-08-12,next session
+2026-08-11T22:10:45,hourly,KMPR,KEMPER Corp,Gorevic Jason N,Director,Common Stock,2026-08-10,2026-08-11T17:53:37-04:00,1,5000,25.9100,129550,2026-08-12,next session
+2026-08-11T22:10:45,hourly,KMPR,KEMPER Corp,Gorevic Jason N,Director,Common Stock,2026-08-10,2026-08-11T17:53:37-04:00,1,5000,25.9100,129550,2026-08-12,next session
+2026-08-11T22:10:45,hourly,DINO,HF Sinclair Corp,MYERS FRANKLIN,CEO,Common Stock,2026-08-11,2026-08-11T17:45:34-04:00,0,15000,85.3000,1279500,2026-08-12,next session
+2026-08-11T22:10:45,hourly,DINO,HF Sinclair Corp,MYERS FRANKLIN,CEO,Common Stock,2026-08-11,2026-08-11T17:45:34-04:00,0,15000,85.3000,1279500,2026-08-12,next session
+2026-08-11T22:10:45,hourly,SMRT,"SmartRent, Inc.",Martell Frank,Chief Executive Officer,Class A Common Stock,2026-08-11,2026-08-11T17:24:05-04:00,0,100000,1.4226,142260,2026-08-12,next session
+2026-08-11T22:10:45,hourly,SMRT,"SmartRent, Inc.",Martell Frank,Chief Executive Officer,Class A Common Stock,2026-08-11,2026-08-11T17:24:05-04:00,0,100000,1.4226,142260,2026-08-12,next session
+2026-08-11T22:10:45,hourly,PLNT,"Planet Fitness, Inc.",Spinelli Stephen JR,Director,Class A common stock,2026-08-10,2026-08-11T17:09:55-04:00,1,10000,49.2800,492800,2026-08-12,next session
+2026-08-11T22:10:45,hourly,PLNT,"Planet Fitness, Inc.",Spinelli Stephen JR,Director,Class A common stock,2026-08-10,2026-08-11T17:09:55-04:00,1,10000,49.2800,492800,2026-08-12,next session
+2026-08-11T23:08:20,hourly,HPP,"Hudson Pacific Properties, Inc.",BORTZ JON E,Director,"Common Stock, par value $0.01",2026-08-11,2026-08-11T18:42:35-04:00,0,25000,13.4000,335000,2026-08-12,next session
+2026-08-11T23:08:20,hourly,HPP,"Hudson Pacific Properties, Inc.",BORTZ JON E,Director,"Common Stock, par value $0.01",2026-08-11,2026-08-11T18:42:35-04:00,0,25000,13.4000,335000,2026-08-12,next session
+2026-08-12T12:04:22,hourly,MTDR,Matador Resources Co,Foran Joseph Wm,Chairman and CEO,Common Stock,2026-08-11,2026-08-12T07:23:42-04:00,1,3839,51.1582,196396,2026-08-12,same-day close
+2026-08-12T12:04:22,hourly,MTDR,Matador Resources Co,Foran Joseph Wm,Chairman and CEO,Common Stock,2026-08-11,2026-08-12T07:23:42-04:00,1,3839,51.1582,196396,2026-08-12,same-day close
+2026-08-12T12:04:22,hourly,AMRC,"Ameresco, Inc.",Cox Brian C,Director,Class A Common Stock,2026-08-10,2026-08-11T19:22:37-04:00,1,39700,25.0700,995279,2026-08-12,next session
+2026-08-12T12:04:22,hourly,AMRC,"Ameresco, Inc.",Cox Brian C,Director,Class A Common Stock,2026-08-10,2026-08-11T19:22:37-04:00,1,39700,25.0700,995279,2026-08-12,next session
+2026-08-12T15:19:13,hourly,ATO,ATMOS ENERGY CORP,WARE WILLIAM JAMES,Director,Common Stock,2026-08-11,2026-08-12T10:54:58-04:00,1,300,167.5945,50278,2026-08-12,same-day close
+2026-08-12T15:19:13,hourly,ATO,ATMOS ENERGY CORP,WARE WILLIAM JAMES,Director,Common Stock,2026-08-11,2026-08-12T10:54:58-04:00,1,300,167.5945,50278,2026-08-12,same-day close
+2026-08-12T19:32:23,hourly,AVBC,"Avidia Bancorp, Inc.",Saul Kennedy O,Director,Common Stock,2026-08-11,2026-08-12T15:00:44-04:00,1,5900,21.6496,127733,2026-08-12,same-day close
+2026-08-12T19:32:23,hourly,AVBC,"Avidia Bancorp, Inc.",Saul Kennedy O,Director,Common Stock,2026-08-11,2026-08-12T15:00:44-04:00,1,5900,21.6496,127733,2026-08-12,same-day close
+2026-08-12T19:32:23,hourly,AVBC,"Avidia Bancorp, Inc.",Grimaldo Joseph F,Director,Common Stock,2026-08-11,2026-08-12T14:59:54-04:00,1,4655,21.4364,99786,2026-08-12,same-day close
+2026-08-12T19:32:23,hourly,AVBC,"Avidia Bancorp, Inc.",Grimaldo Joseph F,Director,Common Stock,2026-08-11,2026-08-12T14:59:54-04:00,1,4655,21.4364,99786,2026-08-12,same-day close
+2026-08-12T21:08:17,hourly,BBBY,"BED BATH & BEYOND, INC.",LEMONIS MARCUS,EXECUTIVE CHAIRMAN & CEO,Common Stock,2026-08-12,2026-08-12T16:58:22-04:00,0,23094,4.3000,99304,2026-08-13,next session
+2026-08-12T21:08:17,hourly,BBBY,"BED BATH & BEYOND, INC.",LEMONIS MARCUS,EXECUTIVE CHAIRMAN & CEO,Common Stock,2026-08-12,2026-08-12T16:58:22-04:00,0,23094,4.3000,99304,2026-08-13,next session
+2026-08-12T21:08:17,hourly,Q,"Qnity Electronics, Inc.",De Bondt Karin,Director,Common Stock,2026-08-11,2026-08-12T16:56:54-04:00,1,1000,138.1360,138136,2026-08-13,next session
+2026-08-12T21:08:17,hourly,Q,"Qnity Electronics, Inc.",De Bondt Karin,Director,Common Stock,2026-08-11,2026-08-12T16:56:54-04:00,1,1000,138.1360,138136,2026-08-13,next session
+2026-08-12T21:08:17,hourly,SELF,"Global Self Storage, Inc.",WINMILL & CO. INC,Other,Common Stock,2026-08-12,2026-08-12T16:52:48-04:00,0,12135,5.1588,62601,2026-08-13,next session
+2026-08-12T21:08:17,hourly,SELF,"Global Self Storage, Inc.",WINMILL & CO. INC,Other,Common Stock,2026-08-12,2026-08-12T16:52:48-04:00,0,12135,5.1588,62601,2026-08-13,next session
+2026-08-12T21:08:17,hourly,FUN,Six Flags Entertainment Corporation/NEW,Reilly John T,President & CEO,"Common Stock, par value $0.01 per share",2026-08-12,2026-08-12T16:43:51-04:00,0,15713,15.8000,248265,2026-08-13,next session
+2026-08-12T21:08:17,hourly,FUN,Six Flags Entertainment Corporation/NEW,Reilly John T,President & CEO,"Common Stock, par value $0.01 per share",2026-08-12,2026-08-12T16:43:51-04:00,0,15713,15.8000,248265,2026-08-13,next session
+2026-08-12T21:08:17,hourly,PTLO,Portillo's Inc.,LEE EUGENE I JR,Director,Class A common stock,2026-08-12,2026-08-12T16:30:11-04:00,0,65355,4.5900,299979,2026-08-13,next session
+2026-08-12T21:08:17,hourly,PTLO,Portillo's Inc.,LEE EUGENE I JR,Director,Class A common stock,2026-08-12,2026-08-12T16:30:11-04:00,0,65355,4.5900,299979,2026-08-13,next session
+2026-08-12T21:08:17,hourly,BTMD,biote Corp.,Beer Marc D,Executive Chairman,Class A Common Stock,2026-08-11,2026-08-12T16:25:21-04:00,1,131950,1.5324,202204,2026-08-13,next session
+2026-08-12T21:08:17,hourly,BTMD,biote Corp.,Beer Marc D,Executive Chairman,Class A Common Stock,2026-08-11,2026-08-12T16:25:21-04:00,1,131950,1.5324,202204,2026-08-13,next session
+2026-08-12T22:07:59,hourly,ACDC,ProFrac Holding Corp.,Wilks Matthew,Chief Executive Officer,"Class A common stock, par value $0.01 per share",2026-08-11,2026-08-12T18:00:06-04:00,1,80000,5.0231,401851,2026-08-13,next session
+2026-08-12T22:07:59,hourly,ACDC,ProFrac Holding Corp.,Wilks Matthew,Chief Executive Officer,"Class A common stock, par value $0.01 per share",2026-08-11,2026-08-12T18:00:06-04:00,1,80000,5.0231,401851,2026-08-13,next session
+2026-08-12T23:06:42,hourly,VIA,"Via Transportation, Inc.",Peres Nechemia Jacob,Director,Class A Common Stock,2026-08-11,2026-08-12T18:27:26-04:00,1,10080,24.7391,249370,2026-08-13,next session
+2026-08-12T23:06:42,hourly,VIA,"Via Transportation, Inc.",Peres Nechemia Jacob,Director,Class A Common Stock,2026-08-11,2026-08-12T18:27:26-04:00,1,10080,24.7391,249370,2026-08-13,next session
+2026-08-12T23:06:42,hourly,ALTO,"Alto Ingredients, Inc.",NATHAN GILBERT E,Director,Common Stock,2026-08-11,2026-08-12T18:17:12-04:00,1,50000,4.1500,207500,2026-08-13,next session
+2026-08-12T23:06:42,hourly,ALTO,"Alto Ingredients, Inc.",NATHAN GILBERT E,Director,Common Stock,2026-08-11,2026-08-12T18:17:12-04:00,1,50000,4.1500,207500,2026-08-13,next session
+2026-08-13T12:05:08,hourly,BTDR,Bitdeer Technologies Group,Potter Michael G,Chief Financial Officer,Class A Ordinary Shares,2026-08-12,2026-08-13T06:53:54-04:00,1,25000,9.0400,226000,2026-08-13,same-day close
+2026-08-13T12:05:08,hourly,BTDR,Bitdeer Technologies Group,Potter Michael G,Chief Financial Officer,Class A Ordinary Shares,2026-08-12,2026-08-13T06:53:54-04:00,1,25000,9.0400,226000,2026-08-13,same-day close
+2026-08-13T12:05:08,hourly,UA,"Under Armour, Inc.",Taleghani Reza,Chief Financial Officer,Class A Common Stock,2026-08-11,2026-08-12T21:03:58-04:00,1,18656,5.3699,100181,2026-08-13,next session
+2026-08-13T12:05:08,hourly,UA,"Under Armour, Inc.",Taleghani Reza,Chief Financial Officer,Class A Common Stock,2026-08-11,2026-08-12T21:03:58-04:00,1,18656,5.3699,100181,2026-08-13,next session
+2026-08-13T12:05:08,hourly,FMX,MEXICAN ECONOMIC DEVELOPMENT INC,KAHN MICHAEL DAVID,Director,ADR,2026-08-11,2026-08-12T19:12:27-04:00,1,2100,118.1300,248073,2026-08-13,next session
+2026-08-13T12:05:08,hourly,FMX,MEXICAN ECONOMIC DEVELOPMENT INC,KAHN MICHAEL DAVID,Director,ADR,2026-08-11,2026-08-12T19:12:27-04:00,1,2100,118.1300,248073,2026-08-13,next session
+2026-08-13T15:19:57,hourly,AMRZ,Amrize Ltd,Oran Baris,Chief Financial Officer,Ordinary Shares,2026-08-12,2026-08-13T11:10:46-04:00,1,6000,47.2550,283530,2026-08-13,same-day close
+2026-08-13T15:19:57,hourly,AMRZ,Amrize Ltd,Oran Baris,Chief Financial Officer,Ordinary Shares,2026-08-12,2026-08-13T11:10:46-04:00,1,6000,47.2550,283530,2026-08-13,same-day close
+2026-08-13T15:19:57,hourly,EMBC,Embecta Corp.,Kurdikar Devdatt,President and CEO,Common Stock,2026-08-12,2026-08-13T10:50:55-04:00,1,30000,4.6979,140937,2026-08-13,same-day close
+2026-08-13T15:19:57,hourly,EMBC,Embecta Corp.,Kurdikar Devdatt,President and CEO,Common Stock,2026-08-12,2026-08-13T10:50:55-04:00,1,30000,4.6979,140937,2026-08-13,same-day close
+2026-08-13T15:19:57,hourly,EMBC,Embecta Corp.,Elguicze Jacob,SVP and CFO,Common Stock,2026-08-12,2026-08-13T10:48:58-04:00,1,20000,4.6680,93360,2026-08-13,same-day close
+2026-08-13T15:19:57,hourly,EMBC,Embecta Corp.,Elguicze Jacob,SVP and CFO,Common Stock,2026-08-12,2026-08-13T10:48:58-04:00,1,20000,4.6680,93360,2026-08-13,same-day close
+2026-08-13T15:19:57,hourly,EMBC,Embecta Corp.,Mann Jeffrey Z,"Pres, Pharm Svc&Prod Mgmt, CLO",Common Stock,2026-08-12,2026-08-13T10:47:14-04:00,1,20000,4.9900,99800,2026-08-13,same-day close
+2026-08-13T15:19:57,hourly,EMBC,Embecta Corp.,Mann Jeffrey Z,"Pres, Pharm Svc&Prod Mgmt, CLO",Common Stock,2026-08-12,2026-08-13T10:47:14-04:00,1,20000,4.9900,99800,2026-08-13,same-day close
+2026-08-13T15:19:57,hourly,EMBC,Embecta Corp.,HOMBACH ROBERT J.,Director,Common Stock,2026-08-12,2026-08-13T10:45:35-04:00,1,45000,4.9744,223848,2026-08-13,same-day close
+2026-08-13T15:19:57,hourly,EMBC,Embecta Corp.,HOMBACH ROBERT J.,Director,Common Stock,2026-08-12,2026-08-13T10:45:35-04:00,1,45000,4.9744,223848,2026-08-13,same-day close
+2026-08-13T19:32:40,hourly,ATMU,Atmus Filtration Technologies Inc.,Macadam Stephen E.,Director,Common Stock,2026-08-12,2026-08-13T14:48:59-04:00,1,2000,49.7756,99551,2026-08-13,same-day close
+2026-08-13T19:32:40,hourly,ATMU,Atmus Filtration Technologies Inc.,Macadam Stephen E.,Director,Common Stock,2026-08-12,2026-08-13T14:48:59-04:00,1,2000,49.7756,99551,2026-08-13,same-day close
+2026-08-13T21:09:26,hourly,MBGL,Mobility Global Inc.,PEEK MARK S,Director,Common Stock,2026-08-13,2026-08-13T16:59:21-04:00,0,50000,19.6113,980566,2026-08-14,next session
+2026-08-13T21:09:26,hourly,MBGL,Mobility Global Inc.,PEEK MARK S,Director,Common Stock,2026-08-13,2026-08-13T16:59:21-04:00,0,50000,19.6113,980566,2026-08-14,next session
+2026-08-13T21:09:26,hourly,KMPR,KEMPER Corp,McAnena Stephen J,President and CEO,Common Stock,2026-08-13,2026-08-13T16:53:51-04:00,0,3000,26.5000,79500,2026-08-14,next session
+2026-08-13T21:09:26,hourly,KMPR,KEMPER Corp,McAnena Stephen J,President and CEO,Common Stock,2026-08-13,2026-08-13T16:53:51-04:00,0,3000,26.5000,79500,2026-08-14,next session
+2026-08-13T21:09:26,hourly,PAR,PAR TECHNOLOGY CORP,Singh Narinder,Director,Common Stock,2026-08-12,2026-08-13T16:43:05-04:00,1,11518,17.3600,199950,2026-08-14,next session
+2026-08-13T21:09:26,hourly,PAR,PAR TECHNOLOGY CORP,Singh Narinder,Director,Common Stock,2026-08-12,2026-08-13T16:43:05-04:00,1,11518,17.3600,199950,2026-08-14,next session
+2026-08-13T21:09:26,hourly,RM,Regional Management Corp.,Lamba Lakhbir S.,President and CEO,Common Stock,2026-08-12,2026-08-13T16:30:03-04:00,1,10000,31.6495,316495,2026-08-14,next session
+2026-08-13T21:09:26,hourly,RM,Regional Management Corp.,Lamba Lakhbir S.,President and CEO,Common Stock,2026-08-12,2026-08-13T16:30:03-04:00,1,10000,31.6495,316495,2026-08-14,next session
+2026-08-13T21:09:26,hourly,ELAN,Elanco Animal Health Inc,Harrington Michael J,Director,Common Stock,2026-08-12,2026-08-13T16:28:51-04:00,1,5000,21.8200,109100,2026-08-14,next session
+2026-08-13T21:09:26,hourly,ELAN,Elanco Animal Health Inc,Harrington Michael J,Director,Common Stock,2026-08-12,2026-08-13T16:28:51-04:00,1,5000,21.8200,109100,2026-08-14,next session
+2026-08-13T21:09:26,hourly,TNC,TENNANT CO,Mulligan Donal L,Director,Common Stock,2026-08-12,2026-08-13T16:23:31-04:00,1,8000,67.3400,538720,2026-08-14,next session
+2026-08-13T21:09:26,hourly,TNC,TENNANT CO,Mulligan Donal L,Director,Common Stock,2026-08-12,2026-08-13T16:23:31-04:00,1,8000,67.3400,538720,2026-08-14,next session
+2026-08-13T21:09:26,hourly,TNC,TENNANT CO,Morse Timothy R.,Director,Common Stock,2026-08-12,2026-08-13T16:22:39-04:00,1,1500,68.1800,102270,2026-08-14,next session
+2026-08-13T21:09:26,hourly,TNC,TENNANT CO,Morse Timothy R.,Director,Common Stock,2026-08-12,2026-08-13T16:22:39-04:00,1,1500,68.1800,102270,2026-08-14,next session
+2026-08-13T22:08:28,hourly,BRK.B,BERKSHIRE HATHAWAY INC,O'Sullivan Michael J.,See Remarks,Class B Common Stock,2026-08-12,2026-08-13T17:06:55-04:00,1,488,512.4427,250072,2026-08-14,next session
+2026-08-13T22:08:28,hourly,BRK.B,BERKSHIRE HATHAWAY INC,O'Sullivan Michael J.,See Remarks,Class B Common Stock,2026-08-12,2026-08-13T17:06:55-04:00,1,488,512.4427,250072,2026-08-14,next session
+2026-08-13T23:07:52,hourly,DFH,"Dream Finders Homes, Inc.",BECKWITT RICHARD,Director,"Class A common stock, par value $0.01 per share",2026-08-13,2026-08-13T18:48:22-04:00,0,90000,14.0527,1264740,2026-08-14,next session
+2026-08-13T23:07:52,hourly,DFH,"Dream Finders Homes, Inc.",BECKWITT RICHARD,Director,"Class A common stock, par value $0.01 per share",2026-08-13,2026-08-13T18:48:22-04:00,0,90000,14.0527,1264740,2026-08-14,next session
+2026-08-13T23:07:52,hourly,CODI,Compass Diversified Holdings,Keller Stephen,Other,Common Shares,2026-08-12,2026-08-13T18:32:55-04:00,1,10000,12.0143,120143,2026-08-14,next session
+2026-08-13T23:07:52,hourly,CODI,Compass Diversified Holdings,Keller Stephen,Other,Common Shares,2026-08-12,2026-08-13T18:32:55-04:00,1,10000,12.0143,120143,2026-08-14,next session
+2026-08-13T23:07:52,hourly,CODI,Compass Diversified Holdings,Sawtelle Zachary T.,Other,Common Shares,2026-08-13,2026-08-13T18:31:54-04:00,0,32000,12.0877,386808,2026-08-14,next session
+2026-08-13T23:07:52,hourly,CODI,Compass Diversified Holdings,Sawtelle Zachary T.,Other,Common Shares,2026-08-13,2026-08-13T18:31:54-04:00,0,32000,12.0877,386808,2026-08-14,next session
+2026-08-14T12:02:43,hourly,MTDR,Matador Resources Co,Foran Joseph Wm,Chairman and CEO,Common Stock,2026-08-13,2026-08-14T07:40:44-04:00,1,15000,51.9200,778800,2026-08-14,same-day close
+2026-08-14T12:02:43,hourly,MTDR,Matador Resources Co,Foran Joseph Wm,Chairman and CEO,Common Stock,2026-08-13,2026-08-14T07:40:44-04:00,1,15000,51.9200,778800,2026-08-14,same-day close
+2026-08-14T12:02:43,hourly,BORR,Borr Drilling Ltd,Currie Jeffrey,Director,Common Shares,2026-08-13,2026-08-14T07:37:51-04:00,1,125000,4.0131,501637,2026-08-14,same-day close
+2026-08-14T12:02:43,hourly,BORR,Borr Drilling Ltd,Currie Jeffrey,Director,Common Shares,2026-08-13,2026-08-14T07:37:51-04:00,1,125000,4.0131,501637,2026-08-14,same-day close
+2026-08-14T12:02:43,hourly,CVRX,"CVRx, Inc.",Binkowski Brent,CHIEF OPERATING OFFICER,Common Stock,2026-08-13,2026-08-13T20:18:58-04:00,0,26223,2.9147,76432,2026-08-14,next session
+2026-08-14T12:02:43,hourly,CVRX,"CVRx, Inc.",Binkowski Brent,CHIEF OPERATING OFFICER,Common Stock,2026-08-13,2026-08-13T20:18:58-04:00,0,26223,2.9147,76432,2026-08-14,next session
+2026-08-14T12:02:43,hourly,LTC,LTC PROPERTIES INC,Gruber David L,Director,Common Stock,2026-08-12,2026-08-13T20:18:52-04:00,1,4000,38.3000,153200,2026-08-14,next session
+2026-08-14T12:02:43,hourly,LTC,LTC PROPERTIES INC,Gruber David L,Director,Common Stock,2026-08-12,2026-08-13T20:18:52-04:00,1,4000,38.3000,153200,2026-08-14,next session
+2026-08-14T12:02:43,hourly,XRN,Chiron Real Estate Inc.,Roseth Aaron Robert,COO,Common Stock,2026-08-12,2026-08-13T20:14:55-04:00,1,13500,36.7300,495855,2026-08-14,next session
+2026-08-14T12:02:43,hourly,XRN,Chiron Real Estate Inc.,Roseth Aaron Robert,COO,Common Stock,2026-08-12,2026-08-13T20:14:55-04:00,1,13500,36.7300,495855,2026-08-14,next session
+2026-08-14T13:50:04,hourly,CMC,COMMERCIAL METALS Co,McPherson John R,Director,Common Stock,2026-08-13,2026-08-14T08:29:45-04:00,1,1390,71.9200,99969,2026-08-14,same-day close
+2026-08-14T13:50:04,hourly,CMC,COMMERCIAL METALS Co,McPherson John R,Director,Common Stock,2026-08-13,2026-08-14T08:29:45-04:00,1,1390,71.9200,99969,2026-08-14,same-day close
+2026-08-14T13:50:04,hourly,BORR,Borr Drilling Ltd,Troim Tor Olav,Director,Common Shares,2026-08-13,2026-08-14T08:11:04-04:00,1,1500000,4.0245,6036750,2026-08-14,same-day close
+2026-08-14T13:50:04,hourly,BORR,Borr Drilling Ltd,Troim Tor Olav,Director,Common Shares,2026-08-13,2026-08-14T08:11:04-04:00,1,1500000,4.0245,6036750,2026-08-14,same-day close
+2026-08-14T16:09:49,hourly,ABCL,AbCellera Biologics Inc.,Booth Andrew,Chief Financial Officer,Common Shares,2026-08-14,2026-08-14T12:04:25-04:00,0,37200,10.3200,383904,2026-08-14,same-day close
+2026-08-14T16:09:49,hourly,ABCL,AbCellera Biologics Inc.,Booth Andrew,Chief Financial Officer,Common Shares,2026-08-14,2026-08-14T12:04:25-04:00,0,37200,10.3200,383904,2026-08-14,same-day close
+2026-08-14T18:11:32,hourly,KEEL,Keel Infrastructure Corp.,Gagnon Benjamin,Chief Executive Officer,Common Stock,2026-08-13,2026-08-14T13:44:25-04:00,1,58888,3.3300,196097,2026-08-14,same-day close
+2026-08-14T18:11:32,hourly,KEEL,Keel Infrastructure Corp.,Gagnon Benjamin,Chief Executive Officer,Common Stock,2026-08-13,2026-08-14T13:44:25-04:00,1,58888,3.3300,196097,2026-08-14,same-day close
+2026-08-14T20:56:26,hourly,SELF,"Global Self Storage, Inc.",WINMILL & CO. INC,Other,Common Stock,2026-08-14,2026-08-14T16:19:28-04:00,0,11658,5.2142,60788,2026-08-15,next session
+2026-08-14T20:56:26,hourly,SELF,"Global Self Storage, Inc.",WINMILL & CO. INC,Other,Common Stock,2026-08-14,2026-08-14T16:19:28-04:00,0,11658,5.2142,60788,2026-08-15,next session
+2026-08-14T20:56:26,hourly,ANGX,"Angel Studios, Inc.",Harmon Neal,Chief Executive Officer,"Class A Common Stock, par value $0.0001 per share",2026-08-13,2026-08-14T16:18:20-04:00,1,29036,4.3053,125007,2026-08-15,next session
+2026-08-14T20:56:26,hourly,ANGX,"Angel Studios, Inc.",Harmon Neal,Chief Executive Officer,"Class A Common Stock, par value $0.0001 per share",2026-08-13,2026-08-14T16:18:20-04:00,1,29036,4.3053,125007,2026-08-15,next session
+2026-08-14T20:56:26,hourly,ETN,Eaton Corp plc,Johnson Gerald,Director,Ordinary Shares,2026-08-13,2026-08-14T16:15:06-04:00,1,200,460.8105,92162,2026-08-15,next session
+2026-08-14T20:56:26,hourly,ETN,Eaton Corp plc,Johnson Gerald,Director,Ordinary Shares,2026-08-13,2026-08-14T16:15:06-04:00,1,200,460.8105,92162,2026-08-15,next session
+2026-08-14T20:56:26,hourly,CODI,Compass Diversified Holdings,ENTERLINE LARRY L,Other,Common Shares,2026-08-13,2026-08-14T16:15:06-04:00,1,67114,12.4176,833395,2026-08-15,next session
+2026-08-14T20:56:26,hourly,CODI,Compass Diversified Holdings,ENTERLINE LARRY L,Other,Common Shares,2026-08-13,2026-08-14T16:15:06-04:00,1,67114,12.4176,833395,2026-08-15,next session
+2026-08-14T22:45:46,hourly,BROS,Dutch Bros Inc.,Penegor Todd Allan,Director,Class A Common Stock,2026-08-13,2026-08-14T18:23:26-04:00,1,2000,51.5600,103120,2026-08-15,next session
+2026-08-14T22:45:46,hourly,BROS,Dutch Bros Inc.,Penegor Todd Allan,Director,Class A Common Stock,2026-08-13,2026-08-14T18:23:26-04:00,1,2000,51.5600,103120,2026-08-15,next session
+2026-08-14T22:45:46,hourly,ANGX,"Angel Studios, Inc.",Sarowitz Steven I,Director,"Class A Common Stock, par value $0.0001 per share",2026-08-13,2026-08-14T18:05:59-04:00,1,353815,3.8314,1355594,2026-08-15,next session
+2026-08-14T22:45:46,hourly,ANGX,"Angel Studios, Inc.",Sarowitz Steven I,Director,"Class A Common Stock, par value $0.0001 per share",2026-08-13,2026-08-14T18:05:59-04:00,1,353815,3.8314,1355594,2026-08-15,next session
+2026-08-17T11:46:27,hourly,PAL,"Proficient Auto Logistics, Inc",Lal Rohit,Director,Common Stock,2026-08-14,2026-08-14T20:14:46-04:00,0,50000,5.4500,272500,2026-08-15,next session
+2026-08-17T11:46:27,hourly,PAL,"Proficient Auto Logistics, Inc",Lal Rohit,Director,Common Stock,2026-08-14,2026-08-14T20:14:46-04:00,0,50000,5.4500,272500,2026-08-15,next session
+2026-08-17T11:46:27,hourly,INFQ,"Infleqtion, Inc.",MAVERICK CAPITAL LTD,Director,Common Stock,2026-08-14,2026-08-14T20:09:13-04:00,0,52071,12.4222,646836,2026-08-15,next session
+2026-08-17T11:46:27,hourly,INFQ,"Infleqtion, Inc.",MAVERICK CAPITAL LTD,Director,Common Stock,2026-08-14,2026-08-14T20:09:13-04:00,0,52071,12.4222,646836,2026-08-15,next session
+2026-08-17T11:46:27,hourly,INFQ,"Infleqtion, Inc.",MAVERICK CAPITAL LTD,Director,Common Stock,2026-08-14,2026-08-14T20:09:13-04:00,0,52071,12.4222,646836,2026-08-15,next session
+2026-08-17T11:46:27,hourly,INFQ,"Infleqtion, Inc.",MAVERICK CAPITAL LTD,Director,Common Stock,2026-08-14,2026-08-14T20:09:13-04:00,0,52071,12.4222,646836,2026-08-15,next session
+2026-08-17T11:46:27,hourly,OPEN,Opendoor Technologies Inc.,Nejatian Kasra,Chief Executive Officer,Common Stock,2026-08-14,2026-08-14T19:26:52-04:00,0,27625,3.6200,100002,2026-08-15,next session
+2026-08-17T11:46:27,hourly,OPEN,Opendoor Technologies Inc.,Nejatian Kasra,Chief Executive Officer,Common Stock,2026-08-14,2026-08-14T19:26:52-04:00,0,27625,3.6200,100002,2026-08-15,next session
+2026-08-17T20:49:39,hourly,KURA,"Kura Oncology, Inc.",WILSON TROY EDWARD,President and CEO,Common Stock,2026-08-17,2026-08-17T16:45:03-04:00,0,100000,11.1200,1112000,2026-08-18,next session
+2026-08-17T20:49:39,hourly,KURA,"Kura Oncology, Inc.",WILSON TROY EDWARD,President and CEO,Common Stock,2026-08-17,2026-08-17T16:45:03-04:00,0,100000,11.1200,1112000,2026-08-18,next session
+2026-08-17T21:46:47,hourly,KEEL,Keel Infrastructure Corp.,WILSON LIAM DANIEL,Chief Operating Officer,Common Stock,2026-08-17,2026-08-17T17:04:58-04:00,0,26472,3.7800,100064,2026-08-18,next session
+2026-08-17T21:46:47,hourly,KEEL,Keel Infrastructure Corp.,WILSON LIAM DANIEL,Chief Operating Officer,Common Stock,2026-08-17,2026-08-17T17:04:58-04:00,0,26472,3.7800,100064,2026-08-18,next session
+2026-08-17T22:46:43,hourly,PODC,"PodcastOne, Inc.",MERRIMAN D JONATHAN,Director,"Common Stock, $0.00001 par value",2026-08-17,2026-08-17T18:37:13-04:00,0,28300,3.0403,86040,2026-08-18,next session
+2026-08-17T22:46:43,hourly,PODC,"PodcastOne, Inc.",MERRIMAN D JONATHAN,Director,"Common Stock, $0.00001 par value",2026-08-17,2026-08-17T18:37:13-04:00,0,28300,3.0403,86040,2026-08-18,next session
+2026-08-18T11:46:18,hourly,REZI,"RESIDEO TECHNOLOGIES, INC.",Mehta Amit Ashvin,"SVP, Strategy & Business Ops",Common Stock,2026-08-17,2026-08-18T07:33:44-04:00,1,10928,20.6800,225999,2026-08-18,same-day close
+2026-08-18T11:46:18,hourly,REZI,"RESIDEO TECHNOLOGIES, INC.",Mehta Amit Ashvin,"SVP, Strategy & Business Ops",Common Stock,2026-08-17,2026-08-18T07:33:44-04:00,1,10928,20.6800,225999,2026-08-18,same-day close
+2026-08-18T11:46:18,hourly,MOBI,"Mobia Medical, Inc.",Tansey Casey M,Director,Common Stock,2026-08-17,2026-08-17T21:53:45-04:00,0,68559,11.6275,797173,2026-08-18,next session
+2026-08-18T11:46:18,hourly,MOBI,"Mobia Medical, Inc.",Tansey Casey M,Director,Common Stock,2026-08-17,2026-08-17T21:53:45-04:00,0,68559,11.6275,797173,2026-08-18,next session
+2026-08-18T11:46:18,hourly,WULF,TERAWULF INC.,Bucella Michael C.,Director,"Common stock, $0.001 par value per share",2026-08-17,2026-08-17T18:11:48-04:00,0,5883,16.9895,99950,2026-08-18,next session
+2026-08-18T11:46:18,hourly,WULF,TERAWULF INC.,Bucella Michael C.,Director,"Common stock, $0.001 par value per share",2026-08-17,2026-08-17T18:11:48-04:00,0,5883,16.9895,99950,2026-08-18,next session
+2026-08-18T11:46:18,hourly,WULF,TERAWULF INC.,Bucella Michael C.,Director,"Common stock, $0.001 par value per share",2026-08-17,2026-08-17T18:11:48-04:00,0,5883,16.9895,99950,2026-08-18,next session
+2026-08-18T11:46:18,hourly,WULF,TERAWULF INC.,Bucella Michael C.,Director,"Common stock, $0.001 par value per share",2026-08-17,2026-08-17T18:11:48-04:00,0,5883,16.9895,99950,2026-08-18,next session
+2026-08-18T14:02:00,hourly,NRGV,"Energy Vault Holdings, Inc.",Hixon Dylan,Director,Common Stock,2026-08-17,2026-08-18T09:43:48-04:00,1,27472,3.8780,106536,2026-08-18,same-day close
+2026-08-18T14:02:00,hourly,NRGV,"Energy Vault Holdings, Inc.",Hixon Dylan,Director,Common Stock,2026-08-17,2026-08-18T09:43:48-04:00,1,27472,3.8780,106536,2026-08-18,same-day close
+2026-08-18T14:57:07,hourly,ECG,"Everus Construction Group, Inc.",SPARBY DAVID M,Director,Common Stock,2026-08-17,2026-08-18T10:13:09-04:00,1,1000,144.9500,144950,2026-08-18,same-day close
+2026-08-18T14:57:07,hourly,ECG,"Everus Construction Group, Inc.",SPARBY DAVID M,Director,Common Stock,2026-08-17,2026-08-18T10:13:09-04:00,1,1000,144.9500,144950,2026-08-18,same-day close
+2026-08-18T16:54:18,hourly,AMRZ,Amrize Ltd,Poletti Samuel Jonas,Chief Strategy & M&A Officer,Ordinary Shares,2026-08-17,2026-08-18T12:29:20-04:00,1,2510,46.9200,117769,2026-08-18,same-day close
+2026-08-18T16:54:18,hourly,AMRZ,Amrize Ltd,Poletti Samuel Jonas,Chief Strategy & M&A Officer,Ordinary Shares,2026-08-17,2026-08-18T12:29:20-04:00,1,2510,46.9200,117769,2026-08-18,same-day close
+2026-08-18T19:03:02,hourly,ABCL,AbCellera Biologics Inc.,Montalbano John S.,Director,Common Shares,2026-08-18,2026-08-18T14:45:24-04:00,0,10000,11.0300,110300,2026-08-18,same-day close
+2026-08-18T19:03:02,hourly,ABCL,AbCellera Biologics Inc.,Montalbano John S.,Director,Common Shares,2026-08-18,2026-08-18T14:45:24-04:00,0,10000,11.0300,110300,2026-08-18,same-day close
+2026-08-18T20:45:02,hourly,ELAN,Elanco Animal Health Inc,O'Neill Shiv,GC AND CORP SEC,Common Stock,2026-08-18,2026-08-18T16:32:09-04:00,0,3998,23.5800,94273,2026-08-19,next session
+2026-08-18T20:45:02,hourly,ELAN,Elanco Animal Health Inc,O'Neill Shiv,GC AND CORP SEC,Common Stock,2026-08-18,2026-08-18T16:32:09-04:00,0,3998,23.5800,94273,2026-08-19,next session
+2026-08-18T20:45:02,hourly,SELF,"Global Self Storage, Inc.",WINMILL & CO. INC,Other,Common Stock,2026-08-18,2026-08-18T16:16:11-04:00,0,12853,5.3250,68443,2026-08-19,next session
+2026-08-18T20:45:02,hourly,SELF,"Global Self Storage, Inc.",WINMILL & CO. INC,Other,Common Stock,2026-08-18,2026-08-18T16:16:11-04:00,0,12853,5.3250,68443,2026-08-19,next session
+2026-08-18T21:44:37,hourly,CDNL,Cardinal Infrastructure Group Inc.,Wimmer Richard Bennett,Director,Class A Common Stock,2026-08-17,2026-08-18T17:26:41-04:00,1,7500,39.1300,293475,2026-08-19,next session
+2026-08-18T21:44:37,hourly,CDNL,Cardinal Infrastructure Group Inc.,Wimmer Richard Bennett,Director,Class A Common Stock,2026-08-17,2026-08-18T17:26:41-04:00,1,7500,39.1300,293475,2026-08-19,next session
+2026-08-18T21:44:37,hourly,VRCA,Verrica Pharmaceuticals Inc.,Rieger Jayson,CEO and President,Common Stock,2026-08-17,2026-08-18T17:00:14-04:00,1,25000,5.0300,125750,2026-08-19,next session
+2026-08-18T21:44:37,hourly,VRCA,Verrica Pharmaceuticals Inc.,Rieger Jayson,CEO and President,Common Stock,2026-08-17,2026-08-18T17:00:14-04:00,1,25000,5.0300,125750,2026-08-19,next session
+2026-08-18T21:44:37,hourly,NVRI,Enviri Corp,HAZNEDAR CAROLANN I,Director,Common Stock,2026-08-17,2026-08-18T16:55:13-04:00,1,4875,20.4610,99747,2026-08-19,next session
+2026-08-18T21:44:37,hourly,NVRI,Enviri Corp,HAZNEDAR CAROLANN I,Director,Common Stock,2026-08-17,2026-08-18T16:55:13-04:00,1,4875,20.4610,99747,2026-08-19,next session
+2026-08-18T22:47:16,hourly,AUGO,Aura Minerals Inc.,Sousa Mauad Bruno,Director,Common Shares,2026-08-17,2026-08-18T17:51:12-04:00,1,11000,78.9300,868230,2026-08-19,next session
+2026-08-18T22:47:16,hourly,AUGO,Aura Minerals Inc.,Sousa Mauad Bruno,Director,Common Shares,2026-08-17,2026-08-18T17:51:12-04:00,1,11000,78.9300,868230,2026-08-19,next session
+2026-08-19T11:46:18,hourly,EQPT,EquipmentShare.com Inc,Schlacks William J.,Founder & President,Class A Common Stock,2026-08-18,2026-08-18T19:06:38-04:00,0,8950,20.4340,182884,2026-08-19,next session
+2026-08-19T11:46:18,hourly,EQPT,EquipmentShare.com Inc,Schlacks William J.,Founder & President,Class A Common Stock,2026-08-18,2026-08-18T19:06:38-04:00,0,8950,20.4340,182884,2026-08-19,next session
+2026-08-19T13:14:48,hourly,NVRI,Enviri Corp,Minan Peter Francis,Executive Vice President & CFO,Common Stock,2026-08-18,2026-08-19T08:11:12-04:00,1,2946,20.2699,59715,2026-08-19,same-day close
+2026-08-19T13:14:48,hourly,NVRI,Enviri Corp,Minan Peter Francis,Executive Vice President & CFO,Common Stock,2026-08-18,2026-08-19T08:11:12-04:00,1,2946,20.2699,59715,2026-08-19,same-day close

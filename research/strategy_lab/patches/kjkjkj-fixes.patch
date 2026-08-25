@@ -1,0 +1,56 @@
+diff --git a/edgar_common.py b/edgar_common.py
+index d6e755b..ca7c7c4 100644
+--- a/edgar_common.py
++++ b/edgar_common.py
+@@ -2,7 +2,7 @@
+ import os, re, csv, json, time
+ import requests
+ import xml.etree.ElementTree as ET
+-from datetime import datetime
++from datetime import datetime, timedelta
+ 
+ # ------------------------- CONFIG -------------------------
+ STATE_FILE = "seen_filings.json"
+@@ -89,8 +89,17 @@ def parse_ownership_xml(xml_bytes):
+ def qualifies(r):
+     """Returns (bool, reason). Reason is logged either way."""
+     try:
+-        lag = (datetime.strptime(r['reported'][:10], '%Y-%m-%d')
+-               - datetime.strptime(r['txn'], '%Y-%m-%d')).days
++        d1 = datetime.strptime(r['txn'], '%Y-%m-%d').date()
++        d2 = datetime.strptime(r['reported'][:10], '%Y-%m-%d').date()
++        # business-day lag: SEC deadline is 2 business days, so a Friday buy
++        # filed Monday must count as lag 1, not 3
++        step = 1 if d2 >= d1 else -1
++        lag = 0
++        day = d1
++        while day != d2:
++            day += timedelta(days=step)
++            if day.weekday() < 5:
++                lag += step
+     except (ValueError, KeyError):
+         return False, "bad dates"
+     r['lag'] = lag
+@@ -118,8 +127,10 @@ def entry_date(reported_iso):
+     """Same-day close if accepted before 15:45 ET, else next calendar day."""
+     dt = datetime.strptime(reported_iso[:19], '%Y-%m-%dT%H:%M:%S') \
+         if 'T' in reported_iso else datetime.strptime(reported_iso[:19], '%Y-%m-%d %H:%M:%S')
+-    same_day = (dt.hour * 60 + dt.minute) < (15 * 60 + 45)
+-    day = dt.date() if same_day else (dt.date() + __import__('datetime').timedelta(days=1))
++    same_day = (dt.hour * 60 + dt.minute) < (15 * 60 + 45) and dt.weekday() < 5
++    day = dt.date() if same_day else (dt.date() + timedelta(days=1))
++    while day.weekday() >= 5:    # never schedule an entry on a weekend
++        day += timedelta(days=1)
+     return day.isoformat(), ('same-day close' if same_day else 'next session')
+ 
+ 
+@@ -193,7 +204,8 @@ def process(rows, source):
+         k = key_for(r)
+         if k in seen:
+             continue
+-        new_keys.append(k)
++        seen.add(k)              # dedup within this batch too (feed lists each
++        new_keys.append(k)       # filing under both issuer and owner)
+         ok, why = qualifies(r)
+         if ok:
+             hits.append(r)
