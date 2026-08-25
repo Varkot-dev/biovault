@@ -1,0 +1,62 @@
+name: Grade insider strategy
+
+# The strategy lab lives on the research branch; this file sits on main only
+# so GitHub registers the workflow. Every run checks out and commits to the
+# research branch — nothing else on main is touched.
+
+on:
+  workflow_dispatch:        # "Run workflow" button in the Actions tab
+  schedule:
+    - cron: '30 13 * * 6'   # Saturdays 9:30am ET — grade the week's matured trades
+
+permissions:
+  contents: write
+
+concurrency:
+  group: grade-strategy
+  cancel-in-progress: false
+
+env:
+  LAB_BRANCH: claude/trading-strategy-research-208ck3
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/trading-strategy-research-208ck3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests pandas
+
+      - name: Run report card + variant experiments
+        working-directory: research/strategy_lab
+        run: |
+          mkdir -p results
+          STAMP=$(date -u +%F)
+          {
+            echo "# Strategy report — $STAMP"
+            echo
+            echo '## Report card (baseline rule)'
+            echo '```'
+            python grade_log.py filings_log.csv
+            echo '```'
+            echo
+            echo '## Variant experiments'
+            echo '```'
+            python variants.py filings_log.csv
+            echo '```'
+          } | tee "results/report-$STAMP.md"
+          [ -f filings_log_graded.csv ] && mv filings_log_graded.csv "results/graded-$STAMP.csv" || true
+
+      - name: Commit results back to the research branch
+        run: |
+          git config user.name "strategy-lab-bot"
+          git config user.email "actions@github.com"
+          git add research/strategy_lab/results
+          git diff --cached --quiet || git commit -m "Strategy report $(date -u +%F)"
+          git pull --rebase --autostash || true
+          git push
