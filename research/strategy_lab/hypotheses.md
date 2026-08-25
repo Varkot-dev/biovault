@@ -30,7 +30,11 @@ is much harder to explain without shared positive information. This is the
 strongest documented variant in the literature (Cohen–Malloy–Pomorski line
 of work), decided on before any grading was run.
 Test: `variants.py` "cluster buys" vs "baseline".
-Result: (pending — run when ≥30 cluster events have matured)
+Result: 2026-08-25 first reading (report-2026-08-25.md): cluster +5.11%
+(t = 2.25, 71% hit, n = 14) vs baseline −0.33% (t = −0.21, n = 39).
+Direction and size as predicted — but n = 14 is tiny and the t barely clears
+the 8-experiment luck bar (~2.0). Verdict: KEEP, rule frozen as-is,
+re-read when cluster n ≥ 30, most of it from post-2026-08-25 log data.
 Confirmed OOS: (pending)
 
 ## H2 — The signal is worthless in large caps   (2026-08-24)
